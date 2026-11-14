@@ -1,9 +1,15 @@
 name: CI
 
+# Every push to any branch and every pull request. A branch with an open pull
+# request runs once per event; the concurrency group cancels a superseded run
+# on the same ref.
 on:
   push:
-    branches: [main]
   pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -21,7 +27,11 @@ jobs:
         with:
           python-version: "3.11"
       - run: npm ci
-      - name: Rent vs Own parity (JS sim vs Python reference)
+      - name: Reference files are current (regenerate and compare)
+        run: |
+          python3 tests/reference/rent_vs_own_edge_cases.py > /dev/null
+          git diff --exit-code tests/reference/rent_vs_own_edge_cases.json
+      - name: Tests (calculator suite, Rent vs Own suite, Python parity)
         run: npm test
       - name: Production build (prerenders all public routes)
         run: npm run build

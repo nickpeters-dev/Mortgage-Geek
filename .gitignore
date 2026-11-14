@@ -27,3 +27,6 @@ build/
 prospects_seed*.json
 .vercel
 .env*
+
+# Python bytecode from the reference scripts
+__pycache__/
