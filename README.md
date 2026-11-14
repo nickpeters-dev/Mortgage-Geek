@@ -1,6 +1,10 @@
 # The Mortgage Geek
 
+[![CI](https://github.com/nickpeters-dev/Mortgage-Geek/actions/workflows/ci.yml/badge.svg)](https://github.com/nickpeters-dev/Mortgage-Geek/actions/workflows/ci.yml)
+
 A mortgage education site and calculator suite for first-time homebuyers, built and run by a working loan officer. It explains the loan process in plain language, gives buyers honest tools to run their own numbers, and turns that trust into inbound leads.
+
+Under the hood, the application combines 38 prerendered public routes, interactive financial simulations, market-data visualizations, serverless APIs, and a private, authenticated prospecting tracker.
 
 **Live site: [mortgagegeek.ai](https://mortgagegeek.ai)**
 
@@ -86,7 +90,8 @@ src/
   utils/            helpers
   theme.js          design tokens
 api/                Vercel serverless functions
-scripts/            parity harness and seed scripts
+scripts/            parity harness, prerender check, seed script
+.github/workflows/  CI
 scriptable/         iOS widget source
 ```
 
@@ -104,18 +109,45 @@ npm run dev        # dev server at http://localhost:5173
 Other commands:
 
 ```sh
+npm test           # Rent vs Own parity check (needs python3)
 npm run build      # production build, prerenders all public routes to build/client
+npm run verify     # test, build, and prerender check in one command (what CI runs)
 npm run preview    # serve the production build locally
 ```
 
 The public site needs no environment variables. The private Geek Log and the `api/` functions need Upstash Redis credentials and auth secrets in `.env.local` (`GEEKLOG_KV_REST_API_URL`, `GEEKLOG_KV_REST_API_TOKEN`, `GEEKLOG_KEY`, `GEEKLOG_SESSION_SECRET`, `GEEKLOG_DEVICE_TOKEN`, `GEEKLOG_EXPORT_TOKEN`). To run the functions locally, use `vercel dev`.
 
-To check the Rent vs Own math against its Python reference implementation:
+## Testing and verification
 
-```sh
-python3 scripts/rent_vs_own_reference.py > /tmp/rvo_ref.txt
-node scripts/rentVsOwnParity.mjs /tmp/rvo_ref.txt
-```
+This section separates what a machine checks on every push from what I check by hand and what nothing checks yet.
+
+### Automated
+
+`npm run verify` runs all three checks below. GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs the same steps on every push to `main` and every pull request.
+
+| Check | Command | What it catches |
+| --- | --- | --- |
+| Rent vs Own parity | `npm test` | The JavaScript simulation is run against six fixtures and diffed with an independent Python reference implementation ([`scripts/rent_vs_own_reference.py`](scripts/rent_vs_own_reference.py)). Owner wealth, renter wealth, loan balance, and side fund must match at 15 checkpoints across 30 years (to the dollar on the baseline fixture, within $1 on the rest), and the breakeven year and breakeven band must match exactly. |
+| Production build | `npm run build` | Every public route renders in Node without errors. A page that touches `window` or `localStorage` during render fails here. |
+| Prerender check | `npm run check:prerender` | Each of the 38 public routes produced static HTML with a title, meta description, and correct canonical URL. The private `/geek-log` route was not prerendered. `sitemap.xml` lists exactly the prerendered routes. |
+
+A note on what parity does and does not show. Two implementations written separately are unlikely to share the same coding mistake, so agreement is good evidence against arithmetic and off-by-one errors: compounding order, when mortgage insurance drops off, how yearly steps are applied. It is not proof that the model is financially right. Both versions encode the same assumptions (for example, selling costs at 7% and side funds compounding monthly), and if an assumption is wrong, both will be wrong together. The assumptions get reviewed by me, as a loan officer, not by the test.
+
+### Manually reviewed
+
+- **Every change on a preview.** Each branch gets a Vercel preview deploy. I smoke test the affected routes there before merging.
+- **Mortgage content and assumptions.** Program rules, default rates and fees, and regulatory figures are checked against current agency guidelines by me.
+- **Dev console.** A clean browser console with no errors on the affected routes.
+- **Private API.** The Geek Log endpoints have a written curl test suite ([`geeklog-api-test.md`](geeklog-api-test.md)) that is run by hand after deploys that touch the API.
+- **Accessibility.** Color contrast and labels are checked during review against the rules in [`engineering_standards.md`](engineering_standards.md).
+
+### Not yet covered
+
+- **The other calculators.** The payment calculator, pre-qualification estimate, loan comparison, and cash to close tools have no automated tests. They share the core mortgage math module with Rent vs Own, which the parity check exercises indirectly, but their own logic is verified by hand only.
+- **UI behavior.** There are no component tests or end-to-end browser tests.
+- **Serverless functions.** The API handlers, including authentication, have no automated tests. The rates endpoint parses a third-party page and can break when that page changes.
+- **Static analysis.** No linter or type checker is configured.
+- **Accessibility and performance.** No automated contrast, axe, or Lighthouse checks in CI.
 
 ## How this was built: AI-assisted development
 
@@ -132,8 +164,8 @@ I am a mortgage loan officer, not a career software engineer. I built this site 
 - **Written standards.** [`CLAUDE.md`](CLAUDE.md) and [`engineering_standards.md`](engineering_standards.md) are the standing instructions the AI reads at the start of every session: architecture, naming and export conventions, SEO requirements, accessibility, and content voice.
 - **Inventory before edits.** The AI has to read the relevant files and report what it found before changing anything.
 - **Tripwires.** There is a defined list of situations where the AI must stop and ask instead of proceeding: accessibility contrast failures, regulated disclosure wording, trademark use, and anything that reaches outside the task's scope.
-- **Verification on every change.** A clean production build, a clean dev console, and a smoke test of the affected routes. On failure the change is reverted and retried, never patched forward.
-- **Reference implementations for math.** The Rent vs Own simulation has an independent Python version. A parity script diffs the two to the dollar, so a calculator bug cannot hide behind a confident explanation.
+- **Verification on every change.** The automated checks, a clean dev console, and a smoke test of the affected routes (see [Testing and verification](#testing-and-verification)). On failure the change is reverted and retried, never patched forward.
+- **Independent evidence for math.** I do not take the AI's word that a calculation is right. The Rent vs Own simulation has a separate Python reference implementation, and the two are diffed automatically.
 
 **What that process produced**
 
