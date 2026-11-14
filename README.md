@@ -95,7 +95,7 @@ scriptable/         iOS widget source
 Requires Node 20 or newer.
 
 ```sh
-git clone https://github.com/nppeters89-stack/Mortgage-Geek.git
+git clone https://github.com/nickpeters-dev/Mortgage-Geek.git
 cd Mortgage-Geek
 npm install
 npm run dev        # dev server at http://localhost:5173
