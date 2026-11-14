@@ -149,11 +149,36 @@ export function simulateRentVsOwn(input = {}) {
   const taxM0 = (price * s.taxPct) / 100 / 12;
   const insM0 = (price * s.insPct) / 100 / 12;
   // Mortgage insurance accrues on the base loan (before any financed upfront
-  // fee), matching the calculator.
+  // fee), matching the calculator. miM is the level month-one amount the
+  // calculator shows; Conventional PMI is charged at that amount throughout.
   const miM = (baseLoan * (terms.miRate / 100)) / 12;
   const chargesMI = terms.miRate > 0;
 
   const payment = monthlyPayment(loan, s.rate);
+
+  // FHA annual MIP and the USDA annual fee keep a fixed RATE, but the dollar
+  // amount is reset once a year from the loan's average scheduled balance over
+  // the coming twelve months, so it steps down as the loan amortizes. miByYear
+  // holds the monthly amount for each of the 30 years. The average is taken over
+  // the twelve start-of-month scheduled balances, scaled to the base loan (the
+  // financed upfront fee is excluded, the same base miM uses). Programs with a
+  // level premium get miM in every year. Whether a given month is charged at
+  // all is still decided by miChargedThisMonth below.
+  const miByYear = [];
+  if (chargesMI && terms.miBasis === "balance" && loan > 0) {
+    const baseShare = baseLoan / loan;
+    let sched = loan;
+    for (let y = 0; y < YEARS; y++) {
+      let sum = 0;
+      for (let k = 0; k < 12; k++) {
+        sum += sched;
+        sched = Math.max(0, sched - (payment - sched * r));
+      }
+      miByYear.push(((sum / 12) * baseShare * (terms.miRate / 100)) / 12);
+    }
+  } else {
+    for (let y = 0; y < YEARS; y++) miByYear.push(chargesMI ? miM : 0);
+  }
 
   const homeVal = [];
   const homeGrowth = 1 + s.homeG / 100;
@@ -190,12 +215,13 @@ export function simulateRentVsOwn(input = {}) {
     const rentersInsM = s.renterIns * esc;
     const maintM = (homeVal[yIdx] * s.maintRate) / 100 / 12;
 
-    // MI is assessed on the start-of-month balance. When it stops depends on the
-    // program: PMI at 78% of the original price, FHA for the life of the loan
-    // (or 132 months at 10% or more down), USDA for the life of the loan.
+    // Whether MI is charged this month is decided on the start-of-month balance.
+    // When it stops depends on the program: PMI at 78% of the original price,
+    // FHA for the life of the loan (or 132 months at 10% or more down), USDA for
+    // the life of the loan. The amount is this year's entry in miByYear.
     let mi = 0;
     if (chargesMI && miDropMonth === 0) {
-      if (miChargedThisMonth({ miMode, balance, price, month: m })) mi = miM;
+      if (miChargedThisMonth({ miMode, balance, price, month: m })) mi = miByYear[yIdx];
       else miDropMonth = m;
     }
 
@@ -255,12 +281,17 @@ export function simulateRentVsOwn(input = {}) {
     // Rounds taxes and insurance to whole dollars the way the payment calculator
     // does, so this readout equals the calculator's total to the dollar. The
     // month-by-month simulation above keeps the precise values, so the chart and
-    // verdict are unaffected.
+    // verdict are unaffected. For FHA and USDA the simulation's first-year MI is
+    // set from the year's average balance, so it runs slightly under the level
+    // amount this readout (and the calculator) shows.
     owningMonthOne: payment + Math.round(taxM0) + Math.round(insM0) + (chargesMI ? miM : 0),
     sellCostRate: sell,
     miDropMonth: miDropMonth || null,
     flipMonth: flipMonth || null,
     chargesMI,
+    // Monthly MI amount in each of the 30 years, before the drop-off rule is
+    // applied (a year after MI has ended still lists the amount it would be).
+    miByYear,
     terms,
   };
 }
