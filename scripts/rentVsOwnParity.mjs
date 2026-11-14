@@ -1,34 +1,37 @@
 // Parity harness for the Rent vs. Own sim against the Python reference.
 //
 // Usage:
-//   python3 scripts/rent_vs_own_reference.py > /tmp/rvo_ref.txt
-//   node scripts/rentVsOwnParity.mjs /tmp/rvo_ref.txt
+//   npm test                                    (runs the reference, then diffs)
+//   node scripts/rentVsOwnParity.mjs            (same)
+//   node scripts/rentVsOwnParity.mjs <file>     (diff against saved reference output)
 //
-// Bundles src/components/rentVsOwnSim.js with the repo's installed esbuild
-// (no new dependency), runs the JS sim at each fixture's inputs, and diffs
-// against the reference output. Fixture A must match to the dollar at every
-// printed year (the regression guard); B through F within $1; breakeven and
-// band exact everywhere.
-import { readFileSync, mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
+// Imports src/components/rentVsOwnSim.js directly (it and its imports are plain
+// ES modules with explicit .js extensions, so no bundler is needed), runs the JS
+// sim at each fixture's inputs, and diffs against the reference output. Fixture
+// A must match to the dollar at every printed year (the regression guard); B
+// through F within $1; breakeven and band exact everywhere.
+//
+// What this proves: the JS sim and the independent Python reference agree. It
+// does not prove the shared modeling assumptions are right.
+import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { build } from "esbuild";
+import { simulateRentVsOwn, breakevenBand } from "../src/components/rentVsOwnSim.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const refPath = process.argv[2];
-if (!refPath) { console.error("usage: node scripts/rentVsOwnParity.mjs <python-output-file>"); process.exit(2); }
-
-const bundleDir = mkdtempSync(join(tmpdir(), "rvo-parity-"));
-const bundlePath = join(bundleDir, "sim.mjs");
-await build({
-  entryPoints: [join(root, "src/components/rentVsOwnSim.js")],
-  bundle: true,
-  format: "esm",
-  outfile: bundlePath,
-  logLevel: "silent",
-});
-const { simulateRentVsOwn, breakevenBand } = await import(bundlePath);
+let refText;
+if (refPath) {
+  refText = readFileSync(refPath, "utf-8");
+} else {
+  try {
+    refText = execFileSync("python3", [join(root, "scripts/rent_vs_own_reference.py")], { encoding: "utf-8" });
+  } catch (err) {
+    console.error(`could not run the Python reference (python3 required): ${err.message}`);
+    process.exit(2);
+  }
+}
 
 // The same inputs the Python reference prints, keyed by fixture name. The JS
 // sim takes percents where Python takes fractions.
@@ -73,7 +76,7 @@ function parseRef(text) {
   return out;
 }
 
-const ref = parseRef(readFileSync(refPath, "utf-8"));
+const ref = parseRef(refText);
 let failures = 0;
 const flag = (ok, msg) => { if (!ok) { failures++; console.log(`  FAIL ${msg}`); } };
 
