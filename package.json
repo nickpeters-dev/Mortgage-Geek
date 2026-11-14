@@ -7,7 +7,7 @@
     "dev": "react-router dev",
     "build": "react-router build",
     "preview": "vite preview",
-    "test": "node --test tests/mortgageCalculator.test.mjs && node scripts/rentVsOwnParity.mjs",
+    "test": "node --test tests/mortgageCalculator.test.mjs tests/rentVsOwn.test.mjs && node scripts/rentVsOwnParity.mjs",
     "check:prerender": "node scripts/checkPrerender.mjs",
     "verify": "npm test && npm run build && npm run check:prerender"
   },
