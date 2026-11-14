@@ -120,9 +120,11 @@ The public site needs no environment variables. The private Geek Log and the `ap
 ## Testing and verification
 
 ```sh
-npm test           # 146 tests plus the Python parity check (needs python3)
+npm test           # 146 test cases (142 passing, 4 documented TODOs) plus the Python parity check; needs python3
 npm run verify     # tests, production build, and prerender check
 ```
+
+**Automated verification:** 146 test cases across the mortgage calculator and Rent vs Own suites (142 passing, 4 documented TODOs), plus an independent Python parity check.
 
 GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs `npm run verify` on every push to any branch and on every pull request. The badge at the top of this page shows the latest result on `main`.
 
@@ -130,20 +132,20 @@ GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs `np
 
 `npm test` runs two suites with Node's built-in test runner, then the parity check.
 
-| Suite | Category | Tests |
+| Suite | Category | Test cases |
 | --- | --- | --- |
-| Mortgage calculator (78) | Payments and amortization: known answers, schedule totals, extra payment strategies | 14 |
+| Mortgage calculator (78: 75 passing, 3 TODO) | Payments and amortization: known answers, schedule totals, extra payment strategies | 14 |
 | | Loan program rules: fees, insurance rates, and eligibility for FHA, VA, USDA, and Conventional | 32 |
 | | Mortgage insurance end dates | 5 |
 | | Full monthly payment, the payment-first solver, and APR | 19 |
-| | Valid boundary inputs (0% rate, 15% rate, a $0 loan) and known gaps | 8 |
-| Rent vs Own (68) | Edge cases against the Python reference: zero appreciation, rent far below and above the cost of owning, inputs at their limits | 13 |
+| | Valid boundary inputs (0% rate, 15% rate, a $0 loan), plus 3 TODOs | 8 |
+| Rent vs Own (68: 67 passing, 1 TODO) | Edge cases against the Python reference: zero appreciation, rent far below and above the cost of owning, inputs at their limits | 13 |
 | | Closed-form scenarios and properties that must hold across every input limit and loan program | 12 |
 | | Mortgage insurance timing and yearly amounts | 14 |
 | | Agreement with the mortgage calculator's payment | 8 |
-| | Input clamping, default checks, and helpers | 21 |
+| | Input clamping, default checks, and helpers, plus 1 TODO | 21 |
 
-Four of the 146 are marked todo. They record a known gap (the math functions do not re-validate inputs the pages have already checked) so it stays visible in the test output.
+The 4 TODOs are not failures and not skipped work that is hidden. Each is a named test case with no assertion yet, recording one known gap: the math functions do not re-validate inputs the pages have already checked. The test runner lists them on every run, so the gap stays visible.
 
 No test computes its expected answer with the code it is testing. Payment, schedule, and APR figures come from a separate Python implementation using exact decimal arithmetic ([`tests/reference/`](tests/reference/)). Loan program rules are pinned to dated public sources: HUD Mortgagee Letter 2023-05 for FHA, the va.gov funding fee chart for VA, and the USDA fiscal year 2027 fee notice. The Conventional PMI rates are the site's own estimate, not a regulated figure.
 
