@@ -206,8 +206,7 @@ describe("mortgage insurance timing", () => {
   //     that is the first uncharged month.
   //   FHA: for the life of the loan under 10% down; 132 months at 10% or more.
   //   USDA: for the life of the loan. VA: none.
-  // The premium amount is flat for as long as it is charged. See the report for
-  // how that compares with how FHA and USDA actually bill.
+  // How the dollar amount behaves while charged is covered in the next group.
   test("Conventional 5% down at 6.75%: last PMI month 139, first month without it 140", () => {
     const sim = simulateRentVsOwn({ program: "Conventional", downPct: 5 });
     assert.equal(sim.chargesMI, true);
@@ -262,6 +261,60 @@ describe("mortgage insurance timing", () => {
     assert.equal(fha.eligible, false);
     assert.match(fha.ineligibleReason, /3\.5%/);
     assert.equal(programTerms({ program: "FHA", price: 350000, downPct: 3.5 }).ineligibleReason, null);
+  });
+});
+
+describe("mortgage insurance amount over time", () => {
+  // Assumption pinned (set by Nick, 2026-11-14): FHA annual MIP and the USDA
+  // annual fee keep a fixed RATE, and the monthly dollar amount is reset once a
+  // year from the loan's average scheduled balance for the coming twelve months,
+  // scaled to the base loan. Conventional PMI is a level amount. Expected
+  // dollar values are from tests/reference/expected_values.py.
+  const expected = [
+    // [program, down %, year 1, year 2, year 11, year 30, 30-year total]
+    ["FHA", 3.5, 154.06, 152.35, 130.58, 6.36, 36738.41],
+    ["FHA", 10, 130.62, 129.17, 110.72, 5.39, 31148.91],
+    ["USDA", 0, 101.59, 100.47, 86.11, 4.19, 24226.93],
+  ];
+  for (const [program, downPct, y1, y2, y11, y30, total] of expected) {
+    test(`${program} ${downPct}% down: $${y1} a month in year 1, stepping down to $${y30} in year 30`, () => {
+      const { miByYear } = simulateRentVsOwn({ program, downPct });
+      assert.equal(miByYear.length, 30);
+      near(miByYear[0], y1, 0.005, "year 1");
+      near(miByYear[1], y2, 0.005, "year 2");
+      near(miByYear[10], y11, 0.005, "year 11");
+      near(miByYear[29], y30, 0.005, "year 30");
+      near(miByYear.reduce((n, m) => n + m * 12, 0), total, 0.05, "30-year total");
+      for (let y = 1; y < 30; y++) assert.ok(miByYear[y] < miByYear[y - 1], `year ${y + 1} is lower than year ${y}`);
+    });
+  }
+
+  test("the rate itself does not change: each year's amount is the same share of that year's average balance", () => {
+    // 0.55% on the base-loan share of the balance, checked from the simulation's
+    // own year-end balances: the year's average must sit between its two ends.
+    const sim = simulateRentVsOwn({ program: "FHA", downPct: 3.5 });
+    const share = sim.terms.baseLoan / sim.terms.loan;
+    for (let y = 0; y < 30; y++) {
+      const impliedAverage = (sim.miByYear[y] * 12) / 0.0055 / share;
+      assert.ok(impliedAverage <= sim.years[y].balance + 1e-6, `year ${y + 1} average is not above the opening balance`);
+      assert.ok(impliedAverage >= sim.years[y + 1].balance - 1e-6, `year ${y + 1} average is not below the closing balance`);
+    }
+  });
+
+  test("the first-year amount is just under the level amount the calculator shows, by less than 1%", () => {
+    for (const [program, downPct] of [["FHA", 3.5], ["FHA", 10], ["USDA", 0]]) {
+      const sim = simulateRentVsOwn({ program, downPct });
+      const level = (sim.terms.baseLoan * (sim.terms.miRate / 100)) / 12;
+      assert.ok(sim.miByYear[0] < level);
+      assert.ok(sim.miByYear[0] > level * 0.99);
+    }
+  });
+
+  test("Conventional PMI is a level amount; VA and 20% down have none", () => {
+    const conv = simulateRentVsOwn({ program: "Conventional", downPct: 3.5 });
+    for (const m of conv.miByYear) near(m, (337750 * 0.0052) / 12, 1e-9); // 146.36
+    assert.ok(simulateRentVsOwn({ program: "VA", downPct: 0 }).miByYear.every((m) => m === 0));
+    assert.ok(simulateRentVsOwn({ program: "Conventional", downPct: 20 }).miByYear.every((m) => m === 0));
   });
 });
 

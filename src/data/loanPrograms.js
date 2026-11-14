@@ -22,6 +22,13 @@ export {
 //   "life"  — for as long as the loan is open
 //   "11yr"  — 132 months (FHA with 10% or more down)
 //   "none"  — never charged
+//
+// How the monthly dollar amount behaves while it is charged (miBasis):
+//   "original" — a level amount on the original base loan (Conventional PMI)
+//   "balance"  — the rate is fixed but the dollar amount resets once a year
+//                from the loan's average scheduled balance for the coming
+//                twelve months, so it steps down as the loan pays down (FHA
+//                annual MIP and the USDA annual fee)
 const MI_DROP_RATIO = 0.78;
 const FHA_11YR_MONTHS = 132;
 
@@ -33,16 +40,19 @@ export function programTerms({ program, price, downPct, vaUsage = "first" }) {
   const extra = {
     Conventional: {
       miMode: t.miRate > 0 ? "ltv78" : "none",
+      miBasis: "original",
       miNote: downPct >= 20 ? "No mortgage insurance required" : "Estimated at 740+ FICO, under 43% DTI",
       ineligibleReason: t.eligible ? null : "Conventional loans require a minimum down payment of 3%.",
     },
     FHA: {
       miMode: downPct < 10 ? "life" : "11yr",
+      miBasis: "balance",
       miNote: downPct < 10 ? "MIP for life of loan" : "MIP removable after 11 years",
       ineligibleReason: t.eligible ? null : "FHA loans require a minimum down payment of 3.5%.",
     },
     VA: {
       miMode: "none",
+      miBasis: "original",
       miNote: vaUsage === "exempt"
         ? "Funding fee waived, service-connected disability"
         : "No monthly mortgage insurance",
@@ -50,6 +60,7 @@ export function programTerms({ program, price, downPct, vaUsage = "first" }) {
     },
     USDA: {
       miMode: "life",
+      miBasis: "balance",
       miNote: "Annual fee for life of loan, subject to property and income eligibility",
       ineligibleReason: null,
     },

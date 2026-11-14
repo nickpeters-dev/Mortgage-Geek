@@ -83,6 +83,25 @@ def apr(loan, prepaid, note_pct, years, monthly_mi=0, mi_months=0):
     return (lo + hi) / 2
 
 
+def declining_mi(loan, base_loan, annual_pct, mi_pct, years=30):
+    """Monthly insurance amount for each year when the RATE is fixed and the
+    dollar amount is reset once a year: mi_pct of the average of that year's
+    twelve start-of-month scheduled balances, scaled to the base loan (the
+    financed upfront fee is excluded), divided by 12."""
+    pay = payment(loan, annual_pct, years)
+    i = D(annual_pct) / 100 / 12
+    bal = D(loan)
+    share = D(base_loan) / D(loan)
+    out = []
+    for _ in range(years):
+        total = D(0)
+        for _ in range(12):
+            total += bal
+            bal -= pay - bal * i
+        out.append(total / 12 * share * D(mi_pct) / 100 / 12)
+    return out
+
+
 if __name__ == "__main__":
     q = lambda x, p="0.01": D(x).quantize(D(p))
     print("PAYMENTS")
@@ -110,3 +129,9 @@ if __name__ == "__main__":
     print("  300000, 0 prepaid, 6.5%, 30y ->", q(apr(300000, 0, "6.5", 30), "0.001"))
     print("  300000, 6000 prepaid, 6.5%, 30y ->", q(apr(300000, 6000, "6.5", 30), "0.001"))
     print("  300000, 6000 prepaid, 6.5%, 30y, MI 130/mo x 100 ->", q(apr(300000, 6000, "6.5", 30, 130, 100), "0.001"))
+    print("DECLINING INSURANCE (monthly amount in years 1, 2, 11, 30; and the 30-year total)")
+    for label, loan, base, mi in [("FHA 3.5% down on 350,000 at 6.75%", "343660.625", 337750, "0.55"),
+                                  ("FHA 10% down on 350,000 at 6.75%", "320512.5", 315000, "0.5"),
+                                  ("USDA 0% down on 350,000 at 6.75%", 353500, 350000, "0.35")]:
+        m = declining_mi(loan, base, "6.75", mi)
+        print(f"  {label}: {[str(q(m[k])) for k in (0, 1, 10, 29)]} total {q(sum(m) * 12)}")
