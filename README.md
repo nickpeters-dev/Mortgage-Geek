@@ -123,13 +123,19 @@ This section separates what a machine checks on every push from what I check by 
 
 ### Automated
 
-`npm run verify` runs all three checks below. GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs the same steps on every push to `main` and every pull request.
+`npm run verify` runs every check below. GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs the same steps on every push to any branch and on every pull request, so a change is checked before it merges.
 
 | Check | Command | What it catches |
 | --- | --- | --- |
+| Mortgage calculator suite | `npm test` | 78 tests on the calculator's math: payments against known answers, amortization totals, extra payment strategies, when mortgage insurance ends, the fee and insurance rules for FHA, VA, USDA, and Conventional loans, the payment-first solver, and APR. |
+| Rent vs Own suite | `npm test` | 62 tests: 13 edge cases (zero appreciation, rent far below and far above the cost of owning, and rate, down payment, return, and price at their limits), scenarios with closed-form answers, checks across every input limit and loan program, mortgage insurance timing, input clamping, and agreement with the mortgage calculator's payment. |
 | Rent vs Own parity | `npm test` | The JavaScript simulation is run against six fixtures and diffed with an independent Python reference implementation ([`scripts/rent_vs_own_reference.py`](scripts/rent_vs_own_reference.py)). Owner wealth, renter wealth, loan balance, and side fund must match at 15 checkpoints across 30 years (to the dollar on the baseline fixture, within $1 on the rest), and the breakeven year and breakeven band must match exactly. |
 | Production build | `npm run build` | Every public route renders in Node without errors. A page that touches `window` or `localStorage` during render fails here. |
 | Prerender check | `npm run check:prerender` | Each of the 38 public routes produced static HTML with a title, meta description, and correct canonical URL. The private `/geek-log` route was not prerendered. `sitemap.xml` lists exactly the prerendered routes. |
+
+**Where expected values come from.** No test computes its expected answer with the code it is testing. Payment, schedule, and APR figures come from a separate Python implementation using exact decimal arithmetic ([`tests/reference/`](tests/reference/)). Loan program rules are pinned to dated public sources: HUD Mortgagee Letter 2023-05 for FHA, the va.gov funding fee chart for VA, and the USDA fiscal year 2027 fee notice. The Conventional PMI rates are the site's own published estimate, not a regulated figure, and the tests say so.
+
+**Do the tests catch real mistakes?** As a check, I deliberately broke the calculator code 21 different ways (a wrong fee, a shifted insurance cutoff, a swapped sign) and ran the suites against each. All 21 were caught. Twelve of them passed the parity check alone, which is why the suites exist.
 
 A note on what parity does and does not show. Two implementations written separately are unlikely to share the same coding mistake, so agreement is good evidence against arithmetic and off-by-one errors: compounding order, when mortgage insurance drops off, how yearly steps are applied. It is not proof that the model is financially right. Both versions encode the same assumptions (for example, selling costs at 7% and side funds compounding monthly), and if an assumption is wrong, both will be wrong together. The assumptions get reviewed by me, as a loan officer, not by the test.
 
@@ -143,7 +149,9 @@ A note on what parity does and does not show. Two implementations written separa
 
 ### Not yet covered
 
-- **The other calculators.** The payment calculator, pre-qualification estimate, loan comparison, and cash to close tools have no automated tests. They share the core mortgage math module with Rent vs Own, which the parity check exercises indirectly, but their own logic is verified by hand only.
+- **The other calculators.** Pre-qualification, loan comparison, and cash to close have no tests of their own. They share the tested payment and APR math, but their own logic is verified by hand only.
+- **Whether the assumptions are right.** The tests confirm the code follows its stated rules. They cannot tell me a rule is the right one for a given borrower. Known simplifications: FHA and USDA monthly insurance is modeled as a flat amount, where the real premium declines with the loan balance, and FHA rates for 15-year terms and very large loans are not modeled.
+- **Invalid input inside the math functions.** The pages check every input before it reaches the math, and those checks are tested for Rent vs Own. The math functions themselves do not re-check, and that is recorded as a known gap in the test output.
 - **UI behavior.** There are no component tests or end-to-end browser tests.
 - **Serverless functions.** The API handlers, including authentication, have no automated tests. The rates endpoint parses a third-party page and can break when that page changes.
 - **Static analysis.** No linter or type checker is configured.

@@ -66,10 +66,13 @@ review on the preview.
 ## Build and environment
 - Scripts: `npm run dev` (Vite dev server), `npm run build` (production build),
   `npm run preview` (serve the build locally).
-- Checks: `npm test` (Rent vs Own parity against the Python reference; needs python3),
+- Checks: `npm test` (calculator and Rent vs Own suites in tests/, plus Rent vs Own parity
+  against the Python reference; needs python3). Expected values in tests come from
+  tests/reference/ or cited sources, never from the code under test. If a Rent vs Own default
+  changes, regenerate tests/reference/rent_vs_own_edge_cases.json with its .py script.
   `npm run check:prerender` (after a build: static HTML, metadata, and sitemap sync for every
   public route), `npm run verify` (test + build + prerender check). CI
-  (.github/workflows/ci.yml) runs the same steps on pushes to main and on pull requests.
+  (.github/workflows/ci.yml) runs the same steps on every branch push and pull request.
 - Geek Log KV (Upstash Redis), consumed by api/geeklog/_redis.js: `GEEKLOG_KEY` (API auth),
   `GEEKLOG_KV_REST_API_URL`, `GEEKLOG_KV_REST_API_TOKEN`. Set in the Vercel project env
   (and .env.local for local dev).
