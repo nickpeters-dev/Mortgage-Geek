@@ -25,12 +25,20 @@
 // them with page.route(). No npm dependencies.
 import { createServer } from "node:http";
 import { readFile, stat } from "node:fs/promises";
-import { readFileSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import { extname, join, normalize, resolve } from "node:path";
 
-const ROOT = resolve("build/client");
+const realpath = { native: async (p) => realpathSync.native(p) };
+const ROOT = realpathSync.native(resolve("build/client"));
 const PORT = Number(process.env.PORT || 4321);
 const vercel = JSON.parse(readFileSync("vercel.json", "utf8"));
+
+// Settings this server knows how to mirror (or that do not affect serving).
+// Anything else in vercel.json (trailingSlash, cleanUrls, ...) changes how
+// production serves pages, so refuse to start rather than silently differ.
+const UNDERSTOOD = new Set(["$schema", "buildCommand", "outputDirectory", "redirects", "rewrites", "headers"]);
+const unknown = Object.keys(vercel).filter((k) => !UNDERSTOOD.has(k));
+if (unknown.length) throw new Error(`serveBuild: vercel.json has settings this server does not mirror: ${unknown.join(", ")}`);
 
 const TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -75,7 +83,10 @@ async function fileAt(urlPath) {
   if (!full.startsWith(ROOT)) return null;
   for (const candidate of [full, join(full, "index.html")]) {
     try {
-      if ((await stat(candidate)).isFile()) return candidate;
+      // Paths are case-sensitive on Vercel (checked: /Calculator is a 404 on
+      // the live site). macOS filesystems are not, so compare against the real
+      // on-disk spelling, or /Calculator would wrongly pass locally.
+      if ((await stat(candidate)).isFile() && (await realpath.native(candidate)) === candidate) return candidate;
     } catch {}
   }
   return null;
