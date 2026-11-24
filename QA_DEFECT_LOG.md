@@ -23,7 +23,7 @@ is fixed or changes shape.
 | D-3a | `/manifest.json` is not deployed | Medium | Open | Separated from D-3b. Fix proposed, awaiting approval |
 | D-3b | `/service-worker.js` is not deployed | Low | Open | Do not enable until the caching strategy is reviewed |
 | D-1 | Prerendering inserts NUL bytes before some multi-byte characters | Low | Open, root cause found | Fix options listed, awaiting decision |
-| D-4 | Two public pages have no `<h1>` | Low | Fix in progress | Approved: small isolated fix, no visual change |
+| D-4 | Two public pages have no `<h1>` | Low | Fixed on `fix/d4-page-headings` (pending merge) | Approved: small isolated fix, no visual change |
 
 ---
 
@@ -203,16 +203,29 @@ Proposed strategy (for review, not implemented):
   standalone page.
 - **Business impact:** screen-reader users jump to the `<h1>` to find a page's main content;
   a small SEO signal.
-- **Regression test:** `smoke.spec.ts` asserts, for these two routes only, no `<h1>` and the
-  exact `<h2>` title.
-- **Resolution criteria:** each page has exactly one visible `<h1>` with the same text, no
-  visual change (screenshot comparison), entries removed from `ROUTES_WITHOUT_H1`.
+- **Fix (branch `fix/d4-page-headings`):** `SectionHeader` takes an optional `headingLevel`
+  (default 2). `JargonDecoder` and `PreApprovalChecklist` pass 1 when `standalone`, so the
+  standalone pages get an `<h1>` and the homepage sections stay `<h2>`.
+- **No visual change, verified:** every element's box and computed style recorded before and
+  after the fix on both pages, desktop Chromium and mobile WebKit. Computed styles identical;
+  boxes within 1 px; 40 of 40 comparisons identical. The method was calibrated first: 80 of 80
+  control runs without the change passed, and a deliberate 1 px margin change failed.
+  (Plain screenshot comparison was tried first and rejected: text anti-aliasing differs by up
+  to 1,715 pixels between identical loads, and font-load timing under D-2 shifts text by
+  1.5 px. A tolerance large enough to absorb that would hide real changes.)
+- **Regression test:** `smoke.spec.ts` "D-4 regression": both standalone pages have an `<h1>`
+  with their title; the homepage still has exactly one `<h1>` and these sections are not it.
+  The generic one-`<h1>` check in the smoke test now applies to all 38 routes.
+- **Resolution criteria:** met on the branch; closes when merged.
 
 ## Observations (not defects)
 
 - **O-1:** `src/pages/MainSite.jsx:20` and `src/pages/LearnPage.jsx:258` set `minHeight` twice
   in one style object; the second replaces the first, so the `100vh` fallback never applies
   (browsers without `dvh`, e.g. Safari before 15.4). The build warns on every run.
+- **O-3:** under D-2, `document.fonts.ready` can resolve before the Google Fonts `@import`
+  has registered any fonts, so text is measured in fallback fonts for a moment after load.
+  Any future visual test must wait for specific registered font faces (see the D-4 method).
 - **O-2:** the live `/api/rates` response on 2026-11-24 had `"change": null` for every rate and
   no 7/6 SOFR ARM entry, though the parser looks for both. Possibly a change on the source
   page. Not investigated.

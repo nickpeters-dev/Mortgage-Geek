@@ -11,7 +11,6 @@
 // errors, and these tests need to see them.
 //
 // D-1 (NUL bytes) is characterized per route in production-routing.http.spec.ts.
-// D-4 (no <h1>) is characterized per route in smoke.spec.ts.
 import { test, expect } from "@playwright/test";
 import { existsSync } from "node:fs";
 import { hasD2Signature } from "./support/knownDefects";

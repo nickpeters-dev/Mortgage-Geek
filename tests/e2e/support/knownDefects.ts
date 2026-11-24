@@ -52,14 +52,6 @@ export function explainByKnownDefect(
   return null;
 }
 
-// D-4: public pages whose title is an <h2> with no <h1>, and the exact title
-// each one shows. The smoke test asserts this documented state instead of
-// skipping the heading check: a renamed or removed title, or a new h1, fails.
-export const ROUTES_WITHOUT_H1: Record<string, string> = {
-  "/jargon-decoder": "Jargon Decoder",
-  "/pre-approval-checklist": "Pre-Approval Checklist",
-};
-
 // D-1: exact NUL byte counts in prerendered HTML. Every other route must have 0.
 export const KNOWN_NUL_BYTES: Record<string, number> = {
   "/deep-dives/gift-funds": 3,
