@@ -20,7 +20,7 @@ is fixed or changes shape.
 | ID | Title | Severity | Status | Decision (2026-11-24) |
 |---|---|---|---|---|
 | D-2 | Prerendered `<style>` content is HTML-escaped; hydration fails on every page | Medium (was High) | Open | Approved: investigate and plan on a dedicated branch, with before/after measurement |
-| D-3a | `/manifest.json` is not deployed | Medium | Open | Separated from D-3b. Fix proposed, awaiting approval |
+| D-3a | `/manifest.json` is not deployed | Medium | Fixed on `fix/d3a-manifest` (pending merge) | Approved: separate branch; service worker stays off |
 | D-3b | `/service-worker.js` is not deployed | Low | Open | Do not enable until the caching strategy is reviewed |
 | D-1 | Prerendering inserts NUL bytes before some multi-byte characters | Low | Open, root cause found | Fix options listed, awaiting decision |
 | D-4 | Two public pages have no `<h1>` | Low | Fix in progress | Approved: small isolated fix, no visual change |
@@ -93,7 +93,7 @@ is fixed or changes shape.
 - **Expected:** 200 with the web app manifest that every page links in `<head>`.
 - **Actual:** 404. The file is at the repo root; only `public/` is copied into `build/client`,
   which is Vercel's output directory.
-- **Root cause:** file location. `vercel.json` sets cache headers for `/manifest.json` and
+- **Root cause:** file location (a public file outside `public/`). `vercel.json` sets cache headers for `/manifest.json` and
   `src/root.jsx` links it, so it was intended to be served. Not established whether it ever
   was.
 - **Evidence:** live 404; absent from `build/client`; all four icons the manifest references
@@ -101,14 +101,41 @@ is fixed or changes shape.
 - **Business impact:** the /install page invites visitors to install the app. Chrome and Edge
   need a valid manifest to offer installation, so the prompt never appears on Android or
   desktop. iOS "Add to Home Screen" still works through the apple-specific meta tags.
-- **Proposed fix:** `git mv manifest.json public/manifest.json`. No service worker involved.
-  Current Chrome installability criteria do not require a service worker; to be confirmed on
-  the Vercel preview (Chrome DevTools > Application > Manifest shows installability errors).
-- **Regression test:** `known-defects.spec.ts` "D-3a still present as documented". Allowance:
-  a 404 for exactly `/manifest.json`, only while the file is absent from the build.
-- **Resolution criteria:** `/manifest.json` returns 200 with `application/manifest+json`
-  (or JSON) on the preview; DevTools reports no installability errors; the D-3a allowance
-  and characterization test are removed; a test asserts the manifest's icons all return 200.
+- **Fix (branch `fix/d3a-manifest`):** `git mv manifest.json public/manifest.json`. Content
+  unchanged. `service-worker.js` stays at the repo root, so it is still not deployed and the
+  registration in `src/root.jsx` still fails harmlessly (D-3b unchanged, as decided).
+- **Verification (2026-11-24, local production build):**
+  - `build/client/manifest.json` is byte-identical to the source.
+  - All 4 icons return 200 and their PNG headers match the declared sizes (192, 512, 1024,
+    maskable 512). The maskable icon's artwork fits Android's safe zone: the farthest corner of
+    the mark is about 194 px from center; the 80% circle is 205 px.
+  - Launch URL `/` and the 3 shortcut URLs (`/calculator`, `/prequal`, `/cash-to-close`)
+    return 200.
+  - Chromium's parsed manifest (DevTools protocol `Page.getAppManifest`), production vs fix:
+    production: 0 bytes, no name, no icons, display undefined. Fix: 1,751 bytes, "Mortgage
+    Geek", standalone, 4 icons, 3 shortcuts, theme color #CF3338. `/geek-log` still gets
+    `geeklog.webmanifest`.
+  - **Not a valid check:** `Page.getInstallabilityErrors` returned no errors on production
+    too, because current Chromium offers a basic "install page as app" for any site. It cannot
+    tell broken from fixed, so the tests do not use it.
+  - Fault injection: moving the file back to the repo root makes 43 tests fail (the 4
+    manifest tests and 39 WebKit page tests that now flag the 404 with no allowance).
+- **Still to verify on the Vercel preview:** `Content-Type: application/manifest+json` and
+  `Cache-Control: public, max-age=0, must-revalidate` (set by `vercel.json` headers, which the
+  test server does not apply); Chrome on Android offers "Install app" with the Mortgage Geek
+  name and icon; iOS "Add to Home Screen" opens standalone with the cream apple-touch-icon.
+- **Browser behavior after the fix:** Chrome and Edge (desktop, Android) can install it as a
+  standalone app with its name, icon and 3 shortcuts (long-press the icon on Android). iOS
+  Safari ignores manifest icons and keeps using `apple-touch-icon`; it reads `display`.
+  Firefox desktop does not install web apps. No offline support (no service worker).
+- **Observation:** `background_color` is red (#CF3338) while the app icon is cream, so the
+  Android splash screen is a red field with a cream icon. Possibly intended; a design call.
+- **Regression tests:** `pwa-manifest.http.spec.ts` (served, valid, icons at declared sizes,
+  launch and shortcut URLs load, linked from all 38 public pages, Geek Log keeps its own) and
+  `pwa-manifest.spec.ts` (Chromium parses it as a standalone app). The D-3a allowance, its
+  harness test and its characterization test are removed; a `/manifest.json` 404 now fails
+  any browser test.
+- **Resolution criteria:** the items above pass on the preview, then merge.
 
 ## D-3b: `/service-worker.js` is not deployed
 
