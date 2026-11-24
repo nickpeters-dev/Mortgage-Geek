@@ -19,10 +19,10 @@ is fixed or changes shape.
 
 | ID | Title | Severity | Status | Decision (2026-11-24) |
 |---|---|---|---|---|
-| D-2 | Prerendered `<style>` content is HTML-escaped; hydration fails on every page | Medium (was High) | Open | Approved: investigate and plan on a dedicated branch, with before/after measurement |
+| D-2 | Prerendered `<style>` content is HTML-escaped; hydration fails on every page | Medium (was High) | Open, fix planned | Remediation branch scheduled after Phase 2 (sooner if it interferes with calculator testing). Priority raised within Medium: it masks every other hydration error |
 | D-3a | `/manifest.json` is not deployed | Medium | Open | Separated from D-3b. Fix proposed, awaiting approval |
 | D-3b | `/service-worker.js` is not deployed | Low | Open | Do not enable until the caching strategy is reviewed |
-| D-1 | Prerendering inserts NUL bytes before some multi-byte characters | Low | Open, root cause found | Fix options listed, awaiting decision |
+| D-1 | Prerendering inserts NUL bytes before some multi-byte characters | Low | Deferred | No workaround. Fix with the React 19 upgrade; a React-only test verifies the upgrade |
 | D-4 | Two public pages have no `<h1>` | Low | Fix in progress | Approved: small isolated fix, no visual change |
 | T-1 | Test defect: page HTML read from the browser inspector cache (flaky on WebKit in CI) | Medium (test) | Fixed | Found by the flaky gate on its first CI run |
 
@@ -187,12 +187,25 @@ Proposed strategy (for review, not implemented):
   reading raw HTML may treat the page as binary; SEO auditors may flag it. Which pages are
   affected depends on where multi-byte characters fall in the byte stream, so any content
   edit can move it to another page.
-- **Fix options:** (a) a custom `src/entry.server.jsx` that strips 0x00 from the prerender
-  stream (valid HTML never contains it); (b) upgrade to React 19 (not verified to fix it).
-  18.3.1 is the final React 18 release.
-- **Regression test:** `production-routing.http.spec.ts`: every public route must have exactly
-  its documented NUL count (2 routes listed, all others 0).
-- **Resolution criteria:** 0 NUL bytes on all 38 routes; `KNOWN_NUL_BYTES` emptied.
+- **Decision (2026-11-24): deferred to the React 19 upgrade.** No custom `entry.server`
+  workaround for a low-impact dependency defect. 18.3.1 is the final React 18 release, so no
+  18.x patch will fix it. Not yet verified that React 19 fixes it.
+- **Verifying the upgrade:** `known-defects.http.spec.ts` renders a bare React element (no
+  site code) through `renderToPipeableStream` and asserts the exact 18.3.1 result: one input
+  (2047 padding elements) produces 2 NUL bytes. Sensitivity checked: applying the one-line
+  fix (`currentView.subarray(0, writtenBytes)`) to the installed React made the test fail;
+  restoring React made it pass. On the upgrade branch:
+  - Test still passes: React 19 did not fix it. Reopen the decision (workaround or wait).
+  - Test fails: confirm 0 NUL bytes on all 38 routes (the routing spec will also fail, since
+    its documented counts no longer match), then empty `KNOWN_NUL_BYTES`, delete the test and
+    close D-1.
+- **Regression tests:** `production-routing.http.spec.ts`: every public route must have exactly
+  its documented NUL count (2 routes listed, all others 0). Content edits can move the NUL
+  bytes to other pages; when that test fails after a content-only change, update
+  `KNOWN_NUL_BYTES` from the new build and note it here (the React-only test is the one
+  that tracks the cause). Plus `known-defects.http.spec.ts` above.
+- **Resolution criteria:** 0 NUL bytes on all 38 routes; `KNOWN_NUL_BYTES` emptied; the
+  React-only characterization test removed.
 
 ## D-4: Two public pages have no `<h1>`
 
