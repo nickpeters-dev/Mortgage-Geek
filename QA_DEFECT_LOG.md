@@ -24,6 +24,7 @@ is fixed or changes shape.
 | D-3b | `/service-worker.js` is not deployed | Low | Open | Do not enable until the caching strategy is reviewed |
 | D-1 | Prerendering inserts NUL bytes before some multi-byte characters | Low | Open, root cause found | Fix options listed, awaiting decision |
 | D-4 | Two public pages have no `<h1>` | Low | Fixed on `fix/d4-page-headings` (pending merge) | Approved: small isolated fix, no visual change |
+| T-1 | Test defect: page HTML read from the browser inspector cache (flaky on WebKit in CI) | Medium (test) | Fixed | Found by the flaky gate on its first CI run |
 
 ---
 
@@ -217,6 +218,28 @@ Proposed strategy (for review, not implemented):
   with their title; the homepage still has exactly one `<h1>` and these sections are not it.
   The generic one-`<h1>` check in the smoke test now applies to all 38 routes.
 - **Resolution criteria:** met on the branch; closes when merged.
+
+## T-1 (test defect): page HTML read from the browser's inspector cache
+
+- **Severity:** Medium for the suite (a flaky gate erodes trust in every result). **Found:**
+  2026-11-24, first CI run after `failOnFlakyTests` was enabled. **Status:** Fixed.
+- **Reproduction:** not reproducible locally (150 runs on macOS). In CI (Linux, slower), the
+  "D-2 still present as documented on /" test failed once on mobile WebKit, then passed on
+  retry, on two separate branches.
+- **Expected:** the test reads the HTML the server sent. **Actual:**
+  `response.text: Protocol error (Network.getResponseBody): Resource content was evicted from inspector cache`.
+- **Root cause:** the test read the page body back from the browser after navigation. Under
+  D-2, React replaces the whole document, and WebKit may drop the original body from its
+  inspector cache first. A race that only loses on slower machines. The shared fixture used
+  the same pattern for every page (it failed safe: a lost body removed the D-2 allowance, so
+  the risk was false failures, never false passes).
+- **Fix:** both places now fetch the HTML separately over plain HTTP from the same static
+  server (identical bytes), so nothing depends on the browser's cache.
+- **Evidence the policy worked:** the run was reported `1 flaky`, and `failOnFlakyTests`
+  failed the job instead of letting it pass on the retry.
+- **Verification:** removing the mechanism, not narrowing the timing; 440-run WebKit burn-in
+  (smoke + D-2 tests x10) with zero failures; CI rerun on the branch.
+- **Regression test:** the suite itself; CI with `failOnFlakyTests` reports any recurrence.
 
 ## Observations (not defects)
 
