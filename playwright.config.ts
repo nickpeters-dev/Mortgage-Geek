@@ -18,6 +18,11 @@ export default defineConfig({
   // No retries locally, so flakiness is visible while you work. In CI a test
   // that fails then passes is reported as "flaky", not hidden.
   retries: process.env.CI ? 2 : 0,
+  // A test that fails and then passes on retry is "flaky". In CI that FAILS
+  // the run: a quality gate that sometimes passes broken code is not a gate.
+  // The retry still earns its keep: it separates "flaky" from "consistently
+  // failing" in the report, and its trace shows what differed between attempts.
+  failOnFlakyTests: !!process.env.CI,
   workers: process.env.CI ? 2 : undefined,
   reporter: process.env.CI
     ? [["list"], ["html", { open: "never" }], ["github"]]
