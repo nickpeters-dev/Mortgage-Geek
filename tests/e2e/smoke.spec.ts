@@ -26,8 +26,14 @@ for (const path of PUBLIC_ROUTES) {
     // ASSERTION: exactly one visible top-level heading. getByRole finds it the
     // way a screen reader would, and Playwright's strict mode fails if there
     // are two, so this also guards the one-h1-per-page convention.
-    // (Two routes are known defect D-4 and are checked in known-defects.spec.ts.)
-    if (!ROUTES_WITHOUT_H1.has(path)) {
+    // Known defect D-4: two routes have an <h2> title and no <h1>. For those,
+    // assert that exact documented state (no h1, this exact h2 title), so a
+    // renamed or removed title, or a new h1, fails instead of being skipped.
+    const d4Title = ROUTES_WITHOUT_H1[path];
+    if (d4Title) {
+      await expect(page.getByRole("heading", { level: 1 })).toHaveCount(0);
+      await expect(page.getByRole("heading", { level: 2, name: d4Title, exact: true })).toBeVisible();
+    } else {
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     }
 

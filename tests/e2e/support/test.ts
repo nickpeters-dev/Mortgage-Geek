@@ -7,8 +7,10 @@
 //   2. Any other /api/* call fails loudly (501) instead of hanging or reaching a
 //      real backend. A new endpoint has to be mocked on purpose.
 //   3. A console error, uncaught exception, or failed request (HTTP 400+)
-//      fails the test, unless the test lists it in `allowedConsoleErrors` or it
-//      belongs to a documented known defect (support/knownDefects.ts).
+//      fails the test, unless the test lists it in `allowedConsoleErrors` or a
+//      documented known defect explains it AND the page shows that defect's
+//      evidence (support/knownDefects.ts). Tests that relied on an allowance
+//      carry a "known-defect" annotation in the report.
 //
 // CONCEPT: a fixture is a value a test asks for by name ({ page }, { request }).
 // Playwright builds it before the test, hands it in, and tears it down after,
@@ -20,7 +22,7 @@
 // next, so tests can run in parallel and in any order.
 import { test as base, expect, type Page, type Response } from "@playwright/test";
 import { readFileSync } from "node:fs";
-import { KNOWN_DEFECT_ERRORS } from "./knownDefects";
+import { explainByKnownDefect, type ServedDocument } from "./knownDefects";
 
 const defaultRates = JSON.parse(
   readFileSync(new URL("../fixtures/rates.json", import.meta.url), "utf8"),
@@ -40,7 +42,7 @@ export const test = base.extend<Options>({
   ratesResponse: [defaultRates, { option: true }],
   allowedConsoleErrors: [[], { option: true }],
 
-  page: async ({ page, ratesResponse, allowedConsoleErrors }, use) => {
+  page: async ({ page, ratesResponse, allowedConsoleErrors, baseURL }, use, testInfo) => {
     // Routes are matched newest first, so register the catch-all before the
     // specific mock.
     await page.route("**/api/**", (route) =>
@@ -61,15 +63,31 @@ export const test = base.extend<Options>({
       }
     });
     page.on("pageerror", (err) => errors.push(`uncaught exception: ${err.message}`));
+    // Keep the HTML of every page the test loads: known-defect allowances only
+    // apply when that page shows the defect's own evidence.
+    const documents: Promise<ServedDocument | null>[] = [];
     page.on("response", (res) => {
       if (res.status() >= 400) errors.push(`HTTP ${res.status()} ${res.url()}`);
+      if (res.request().resourceType() === "document" && res.status() === 200) {
+        documents.push(res.text().then((html) => ({ url: res.url(), html }), () => null));
+      }
     });
 
     await use(page);
 
     // Teardown: runs after the test body, pass or fail.
-    const tolerated = [...allowedConsoleErrors, ...KNOWN_DEFECT_ERRORS.map((d) => d.pattern)];
-    const unexpected = errors.filter((e) => !tolerated.some((re) => re.test(e)));
+    const ctx = { baseURL: baseURL!, documents: (await Promise.all(documents)).filter((d) => d !== null) };
+    const unexpected: string[] = [];
+    const usedDefects = new Set<string>();
+    for (const e of errors) {
+      if (allowedConsoleErrors.some((re) => re.test(e))) continue;
+      const defect = explainByKnownDefect(e, ctx);
+      if (defect) usedDefects.add(defect);
+      else unexpected.push(e);
+    }
+    // Shows in the HTML report which tests pass only thanks to a known defect.
+    for (const id of usedDefects) testInfo.annotations.push({ type: "known-defect", description: id });
+
     expect(unexpected, "Console errors, uncaught exceptions, or failed requests during the test").toEqual([]);
   },
 });

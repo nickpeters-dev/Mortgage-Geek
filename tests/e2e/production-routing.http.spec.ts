@@ -7,6 +7,7 @@
 // first ask whether production still behaves this way.
 import { test, expect } from "@playwright/test";
 import routerConfig from "../../react-router.config.js";
+import { KNOWN_NUL_BYTES } from "./support/knownDefects";
 
 const PUBLIC_ROUTES: string[] = routerConfig.prerender;
 
@@ -34,28 +35,30 @@ test("vercel.json rewrite: /geek-log is served (not 404) for the SPA to render",
   expect(res.status()).toBe(200);
 });
 
+test("paths are case-sensitive, as on Vercel: /Calculator is a 404", async ({ request }) => {
+  expect((await request.get("/Calculator", { maxRedirects: 0 })).status()).toBe(404);
+  expect((await request.get("/Deep-Dives/gift-funds", { maxRedirects: 0 })).status()).toBe(404);
+});
+
 test("an unknown URL is a 404 in production, not the homepage", async ({ request }) => {
   const res = await request.get("/this-page-does-not-exist", { maxRedirects: 0 });
   expect(res.status()).toBe(404);
 });
 
-// KNOWN DEFECT (QA_STRATEGY.md, "Known defects", D-1): prerendering inserts NUL
-// bytes before some multi-byte characters. Browsers discard them, so nothing is
-// visible, but tools reading the raw HTML may treat the page as binary.
+// Known defect D-1 (QA_DEFECT_LOG.md): React 18.3.1's server renderer can emit
+// NUL bytes when a multi-byte character lands at its 2048-byte buffer boundary.
 //
-// CONCEPT: test.fail() marks a test as EXPECTED to fail. The suite stays green
-// while the defect exists, and the moment someone fixes it this test "passes",
-// which Playwright reports as a failure, prompting removal of the marker. The
-// defect stays visible in every run instead of being deleted or skipped.
-const KNOWN_NUL_BYTE_ROUTES = new Set([
-  "/deep-dives/gift-funds",
-  "/deep-dives/fha-manual-underwriting",
-]);
-
+// CONCEPT: a characterization test pins the defect's EXACT current signature.
+// The two affected routes must have exactly their documented count; every
+// other route must have none. It fails if the defect is fixed (update the log
+// and this table) AND if it spreads or changes, which a test.fail() marker
+// would not catch: test.fail() accepts any failure at all.
 for (const path of PUBLIC_ROUTES) {
-  test(`${path} prerendered HTML has no NUL bytes`, async ({ request }) => {
-    test.fail(KNOWN_NUL_BYTE_ROUTES.has(path), "Known defect D-1: NUL bytes from prerender");
+  const expected = KNOWN_NUL_BYTES[path] ?? 0;
+  const label = expected ? `has exactly ${expected} NUL byte(s) (known defect D-1)` : "has no NUL bytes";
+  test(`${path} prerendered HTML ${label}`, async ({ request }) => {
     const body = await (await request.get(path)).body();
-    expect(body.includes(0x00), "HTML contains a NUL (0x00) byte").toBe(false);
+    const nulCount = body.filter((b) => b === 0x00).length;
+    expect(nulCount, "NUL (0x00) bytes in the served HTML").toBe(expected);
   });
 }
