@@ -25,6 +25,7 @@ is fixed or changes shape.
 | D-1 | Prerendering inserts NUL bytes before some multi-byte characters | Low | Deferred | No workaround. Fix with the React 19 upgrade; a React-only test verifies the upgrade |
 | D-4 | Two public pages have no `<h1>` | Low | Fix in progress | Approved: small isolated fix, no visual change |
 | T-1 | Test defect: page HTML read from the browser inspector cache (flaky on WebKit in CI) | Medium (test) | Fixed | Found by the flaky gate on its first CI run |
+| R-1 to R-7 | Rate sources: silent fallback, partial data, overwritten manual rates, PreQual USDA never live (R-6, High) | Medium to High | Under review | Documented in QA_RATE_SOURCES.md; do not change rate behavior until reviewed |
 
 ---
 

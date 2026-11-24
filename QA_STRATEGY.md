@@ -203,9 +203,10 @@ eligibility answer is the costliest failure this site can have, so those get the
 | `production-routing.http.spec.ts` (cont.) | | Case-sensitive paths, as on Vercel |
 | `known-defects.spec.ts` | 5 per browser project (10 total) | Characterization of D-2, D-3a, D-3b |
 | `known-defects.http.spec.ts` | 1 | D-1 characterized in React itself (no site code), so a React upgrade that fixes it is noticed |
+| `rate-sources.spec.ts` | 16 per browser project (32 total) | Live, fallback, partial, stale and manual rates on the calculator, PreQual and Cash to Close (QA_RATE_SOURCES.md) |
 | `known-defect-allowances.http.spec.ts` | 6 | Each allowance applies only with its evidence and rejects look-alikes |
 
-Total: 139 tests, about 27 seconds locally including the build.
+Total: 171 tests, about 27 seconds locally including the build.
 
 Mutation checks (2026-11-24), each caught by the intended test: an injected `console.error`;
 a deleted page title; an undocumented NUL-byte page; a missing image on a page carrying D-2
