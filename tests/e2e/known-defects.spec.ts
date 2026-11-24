@@ -26,8 +26,11 @@ for (const path of ["/", "/calculator", "/deep-dives/gift-funds"]) {
     page.on("pageerror", (e) => collect(e.message));
     await page.route("**/api/**", (r) => r.fulfill({ status: 503, json: { success: false } }));
 
-    const response = await page.goto(path);
-    expect(hasD2Signature(await response!.text()), "served HTML has HTML entities inside <style>").toBe(true);
+    // Served HTML fetched over plain HTTP, not read back from the browser
+    // (WebKit can evict it once React replaces the document; flaky in CI).
+    const served = await (await page.request.get(path)).text();
+    expect(hasD2Signature(served), "served HTML has HTML entities inside <style>").toBe(true);
+    await page.goto(path);
     await expect(page.locator("html")).toHaveAttribute("data-hydrated", "true");
     // #423: "the entire root will switch to client rendering". The defining symptom.
     expect([...codes].sort(), "React hydration error codes").toEqual(["418", "423", "425"]);

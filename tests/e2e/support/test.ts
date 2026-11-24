@@ -63,20 +63,25 @@ export const test = base.extend<Options>({
       }
     });
     page.on("pageerror", (err) => errors.push(`uncaught exception: ${err.message}`));
-    // Keep the HTML of every page the test loads: known-defect allowances only
-    // apply when that page shows the defect's own evidence.
-    const documents: Promise<ServedDocument | null>[] = [];
+    // Record every page the test loads: known-defect allowances only apply when
+    // that page shows the defect's own evidence. The HTML is fetched again at
+    // teardown over plain HTTP (same static file, same bytes). Reading it from
+    // the browser with res.text() is a race: under D-2 WebKit can evict the
+    // body once React replaces the document (seen as a flaky test in CI).
+    const documentUrls: string[] = [];
     page.on("response", (res) => {
       if (res.status() >= 400) errors.push(`HTTP ${res.status()} ${res.url()}`);
-      if (res.request().resourceType() === "document" && res.status() === 200) {
-        documents.push(res.text().then((html) => ({ url: res.url(), html }), () => null));
-      }
+      if (res.request().resourceType() === "document" && res.status() === 200) documentUrls.push(res.url());
     });
 
     await use(page);
 
     // Teardown: runs after the test body, pass or fail.
-    const ctx = { baseURL: baseURL!, documents: (await Promise.all(documents)).filter((d) => d !== null) };
+    const documents: ServedDocument[] = [];
+    for (const url of documentUrls) {
+      documents.push({ url, html: await (await page.request.get(url)).text() });
+    }
+    const ctx = { baseURL: baseURL!, documents };
     const unexpected: string[] = [];
     const usedDefects = new Set<string>();
     for (const e of errors) {
