@@ -120,10 +120,14 @@ is fixed or changes shape.
     tell broken from fixed, so the tests do not use it.
   - Fault injection: moving the file back to the repo root makes 43 tests fail (the 4
     manifest tests and 39 WebKit page tests that now flag the 404 with no allowance).
-- **Still to verify on the Vercel preview:** `Content-Type: application/manifest+json` and
-  `Cache-Control: public, max-age=0, must-revalidate` (set by `vercel.json` headers, which the
-  test server does not apply); Chrome on Android offers "Install app" with the Mortgage Geek
-  name and icon; iOS "Add to Home Screen" opens standalone with the cream apple-touch-icon.
+- **Verified on the Vercel preview (2026-11-24):** `/manifest.json` 200 with
+  `Content-Type: application/manifest+json; charset=utf-8` and `Cache-Control: public,
+  max-age=0, must-revalidate`; all 4 icons and `/geeklog.webmanifest` 200; Chromium parses
+  it as a standalone app (1,751 bytes, 4 icons, 3 shortcuts, no errors); `/service-worker.js`
+  still 404, and with service workers allowed the page registers none.
+- **Still to verify by hand, on real devices:** Chrome on Android offers "Install app" with
+  the Mortgage Geek name and icon; iOS "Add to Home Screen" opens standalone with the cream
+  apple-touch-icon.
 - **Browser behavior after the fix:** Chrome and Edge (desktop, Android) can install it as a
   standalone app with its name, icon and 3 shortcuts (long-press the icon on Android). iOS
   Safari ignores manifest icons and keeps using `apple-touch-icon`; it reads `display`.
@@ -135,7 +139,8 @@ is fixed or changes shape.
   `pwa-manifest.spec.ts` (Chromium parses it as a standalone app). The D-3a allowance, its
   harness test and its characterization test are removed; a `/manifest.json` 404 now fails
   any browser test.
-- **Resolution criteria:** the items above pass on the preview, then merge.
+- **Resolution criteria:** preview checks pass (done); device checks pass; merge after the
+  Playwright branch.
 
 ## D-3b: `/service-worker.js` is not deployed
 
