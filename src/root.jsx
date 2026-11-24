@@ -1,4 +1,5 @@
 import { Meta, Links, Outlet, ScrollRestoration, Scripts, useLocation } from "react-router";
+import { useEffect } from "react";
 import { HelmetProvider } from "react-helmet-async";
 import { P } from "./theme";
 
@@ -187,6 +188,15 @@ export function meta() {
 }
 
 export default function App() {
+  // Hydration marker for the Playwright suite (tests/e2e/support/test.ts). React
+  // runs child effects before parent effects, so when this root effect fires,
+  // every page's mount effects (rate fetch, localStorage restore, layout check)
+  // have already run and the page is interactive. Set client-side only, so it
+  // never appears in the prerendered HTML. Invisible; no styling depends on it.
+  useEffect(() => {
+    document.documentElement.dataset.hydrated = "true";
+  }, []);
+
   return (
     <HelmetProvider>
       <Outlet />
