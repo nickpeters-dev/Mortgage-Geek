@@ -42,7 +42,9 @@ const LIVE_SHOWN = { Conventional: "7.000", FHA: "6.625", VA: "6.375", USDA: "6.
 const DEFAULTS_SHOWN = { Conventional: "6.750", FHA: "6.250", VA: "6.250", USDA: "6.250" };
 
 const PROGRAMS = ["Conventional", "FHA", "VA", "USDA"] as const;
-const rateField = (page: Page, program: string) => page.getByLabel(program, { exact: true });
+// type="number" -> role "spinbutton". Not getByLabel: calculator cards are also
+// labelled by program name (Phase 2 accessibility change).
+const rateField = (page: Page, program: string) => page.getByRole("spinbutton", { name: program, exact: true });
 const LIVE_BADGE = /Live( rates loaded)? · /;
 const SOURCE_CLAIM = "National averages via Mortgage News Daily";
 const WAITING_HINT = "they'll auto-populate when live data loads";
