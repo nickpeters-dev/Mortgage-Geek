@@ -106,19 +106,6 @@
         },
         "FHA": {
           "rate": "6.000",
-          "knownDefect": {
-            "id": "D-5",
-            "correct": {
-              "miLabel": "MIP (0.15%)",
-              "mi": "$45.00",
-              "total": "$3,536.05"
-            },
-            "app": {
-              "miLabel": "MIP (0.5%)",
-              "mi": "$150.00",
-              "total": "$3,641"
-            }
-          },
           "eligible": true,
           "baseLoan": "$360,000",
           "totalLoan": "$366,300",
@@ -250,19 +237,6 @@
         },
         "FHA": {
           "rate": "6.250",
-          "knownDefect": {
-            "id": "D-6",
-            "correct": {
-              "miLabel": "MIP (0.7%)",
-              "mi": "$472.50",
-              "total": "$5,947.09"
-            },
-            "app": {
-              "miLabel": "MIP (0.5%)",
-              "mi": "$337.50",
-              "total": "$5,812"
-            }
-          },
           "eligible": true,
           "baseLoan": "$810,000",
           "totalLoan": "$824,175",
@@ -301,6 +275,399 @@
           "upfrontLabel": "Guarantee Fee (1.00%)",
           "total": "$5,673",
           "ambiguous": []
+        }
+      }
+    },
+    {
+      "id": "FHA-base-726200",
+      "title": "base loan exactly $726,200 (20% down on $907,750)",
+      "price": 907750,
+      "downPct": "20",
+      "term": 30,
+      "rates": {
+        "Conventional": "6.500",
+        "FHA": "6.250",
+        "VA": "6.125",
+        "USDA": "6.250"
+      },
+      "vaUsage": "first",
+      "taxes": 300,
+      "insurance": 100,
+      "expected": {
+        "Conventional": {
+          "rate": "6.500",
+          "eligible": true,
+          "baseLoan": "$726,200",
+          "totalLoan": "$726,200",
+          "pi": "$4,590",
+          "mi": null,
+          "miLabel": null,
+          "upfront": null,
+          "upfrontLabel": null,
+          "total": "$4,990",
+          "ambiguous": []
+        },
+        "FHA": {
+          "rate": "6.250",
+          "eligible": true,
+          "baseLoan": "$726,200",
+          "totalLoan": null,
+          "pi": "$4,550",
+          "mi": "$303",
+          "miLabel": "MIP (0.5%)",
+          "upfront": null,
+          "upfrontLabel": "UFMIP (1.75%)",
+          "total": "$5,252",
+          "ambiguous": [
+            "totalLoan",
+            "upfront"
+          ]
+        },
+        "VA": {
+          "rate": "6.125",
+          "eligible": true,
+          "baseLoan": "$726,200",
+          "totalLoan": null,
+          "pi": "$4,468",
+          "mi": null,
+          "miLabel": null,
+          "upfront": null,
+          "upfrontLabel": "Funding Fee (1.25%)",
+          "total": "$4,868",
+          "ambiguous": [
+            "totalLoan",
+            "upfront"
+          ]
+        },
+        "USDA": {
+          "rate": "6.250",
+          "eligible": true,
+          "baseLoan": "$726,200",
+          "totalLoan": "$733,462",
+          "pi": "$4,516",
+          "mi": "$212",
+          "miLabel": "Annual Fee (0.35%)",
+          "upfront": "$7,262",
+          "upfrontLabel": "Guarantee Fee (1.00%)",
+          "total": "$5,128",
+          "ambiguous": []
+        }
+      }
+    },
+    {
+      "id": "FHA-base-726201",
+      "title": "base loan $726,201.60 (20% down on $907,752)",
+      "price": 907752,
+      "downPct": "20",
+      "term": 30,
+      "rates": {
+        "Conventional": "6.500",
+        "FHA": "6.250",
+        "VA": "6.125",
+        "USDA": "6.250"
+      },
+      "vaUsage": "first",
+      "taxes": 300,
+      "insurance": 100,
+      "expected": {
+        "Conventional": {
+          "rate": "6.500",
+          "eligible": true,
+          "baseLoan": "$726,202",
+          "totalLoan": "$726,202",
+          "pi": "$4,590",
+          "mi": null,
+          "miLabel": null,
+          "upfront": null,
+          "upfrontLabel": null,
+          "total": "$4,990",
+          "ambiguous": []
+        },
+        "FHA": {
+          "rate": "6.250",
+          "eligible": true,
+          "baseLoan": "$726,202",
+          "totalLoan": "$738,910",
+          "pi": "$4,550",
+          "mi": "$424",
+          "miLabel": "MIP (0.7%)",
+          "upfront": "$12,709",
+          "upfrontLabel": "UFMIP (1.75%)",
+          "total": "$5,373",
+          "ambiguous": []
+        },
+        "VA": {
+          "rate": "6.125",
+          "eligible": true,
+          "baseLoan": "$726,202",
+          "totalLoan": "$735,279",
+          "pi": "$4,468",
+          "mi": null,
+          "miLabel": null,
+          "upfront": "$9,078",
+          "upfrontLabel": "Funding Fee (1.25%)",
+          "total": "$4,868",
+          "ambiguous": []
+        },
+        "USDA": {
+          "rate": "6.250",
+          "eligible": true,
+          "baseLoan": "$726,202",
+          "totalLoan": "$733,464",
+          "pi": "$4,516",
+          "mi": "$212",
+          "miLabel": "Annual Fee (0.35%)",
+          "upfront": "$7,262",
+          "upfrontLabel": "Guarantee Fee (1.00%)",
+          "total": "$5,128",
+          "ambiguous": []
+        }
+      }
+    },
+    {
+      "id": "FHA-15y-9.99",
+      "title": "15 years, 9.99% down on $400,000 (LTV over 90%)",
+      "price": 400000,
+      "downPct": "9.99",
+      "term": 15,
+      "rates": {
+        "Conventional": "6.500",
+        "FHA": "6.250",
+        "VA": "6.125",
+        "USDA": "6.250"
+      },
+      "vaUsage": "first",
+      "taxes": 300,
+      "insurance": 100,
+      "expected": {
+        "Conventional": {
+          "rate": "6.500",
+          "eligible": true,
+          "baseLoan": "$360,040",
+          "totalLoan": "$360,040",
+          "pi": "$3,136",
+          "mi": "$111",
+          "miLabel": "PMI (0.37%)",
+          "upfront": null,
+          "upfrontLabel": null,
+          "total": "$3,647",
+          "ambiguous": []
+        },
+        "FHA": {
+          "rate": "6.250",
+          "eligible": true,
+          "baseLoan": "$360,040",
+          "totalLoan": "$366,341",
+          "pi": "$3,141",
+          "mi": "$120",
+          "miLabel": "MIP (0.4%)",
+          "upfront": "$6,301",
+          "upfrontLabel": "UFMIP (1.75%)",
+          "total": "$3,661",
+          "ambiguous": []
+        },
+        "VA": {
+          "rate": "6.125",
+          "eligible": true,
+          "baseLoan": "$360,040",
+          "totalLoan": "$365,441",
+          "pi": "$3,109",
+          "mi": null,
+          "miLabel": null,
+          "upfront": "$5,401",
+          "upfrontLabel": "Funding Fee (1.5%)",
+          "total": "$3,509",
+          "ambiguous": []
+        },
+        "USDA": {
+          "eligible": false,
+          "reason": "USDA 30-Year Only"
+        }
+      }
+    },
+    {
+      "id": "FHA-15y-10",
+      "title": "15 years, 10% down on $400,000 (LTV exactly 90%)",
+      "price": 400000,
+      "downPct": "10",
+      "term": 15,
+      "rates": {
+        "Conventional": "6.500",
+        "FHA": "6.250",
+        "VA": "6.125",
+        "USDA": "6.250"
+      },
+      "vaUsage": "first",
+      "taxes": 300,
+      "insurance": 100,
+      "expected": {
+        "Conventional": {
+          "rate": "6.500",
+          "eligible": true,
+          "baseLoan": "$360,000",
+          "totalLoan": "$360,000",
+          "pi": "$3,136",
+          "mi": "$81",
+          "miLabel": "PMI (0.27%)",
+          "upfront": null,
+          "upfrontLabel": null,
+          "total": "$3,617",
+          "ambiguous": []
+        },
+        "FHA": {
+          "rate": "6.250",
+          "eligible": true,
+          "baseLoan": "$360,000",
+          "totalLoan": "$366,300",
+          "pi": "$3,141",
+          "mi": "$45",
+          "miLabel": "MIP (0.15%)",
+          "upfront": "$6,300",
+          "upfrontLabel": "UFMIP (1.75%)",
+          "total": "$3,586",
+          "ambiguous": []
+        },
+        "VA": {
+          "rate": "6.125",
+          "eligible": true,
+          "baseLoan": "$360,000",
+          "totalLoan": "$364,500",
+          "pi": "$3,101",
+          "mi": null,
+          "miLabel": null,
+          "upfront": "$4,500",
+          "upfrontLabel": "Funding Fee (1.25%)",
+          "total": "$3,501",
+          "ambiguous": []
+        },
+        "USDA": {
+          "eligible": false,
+          "reason": "USDA 30-Year Only"
+        }
+      }
+    },
+    {
+      "id": "FHA-15y-hb-21.99",
+      "title": "15 years, high balance, 21.99% down on $998,000",
+      "price": 998000,
+      "downPct": "21.99",
+      "term": 15,
+      "rates": {
+        "Conventional": "6.500",
+        "FHA": "6.250",
+        "VA": "6.125",
+        "USDA": "6.250"
+      },
+      "vaUsage": "first",
+      "taxes": 300,
+      "insurance": 100,
+      "expected": {
+        "Conventional": {
+          "rate": "6.500",
+          "eligible": true,
+          "baseLoan": "$778,540",
+          "totalLoan": "$778,540",
+          "pi": "$6,782",
+          "mi": null,
+          "miLabel": null,
+          "upfront": null,
+          "upfrontLabel": null,
+          "total": "$7,182",
+          "ambiguous": []
+        },
+        "FHA": {
+          "rate": "6.250",
+          "eligible": true,
+          "baseLoan": "$778,540",
+          "totalLoan": "$792,164",
+          "pi": "$6,792",
+          "mi": "$260",
+          "miLabel": "MIP (0.4%)",
+          "upfront": "$13,624",
+          "upfrontLabel": "UFMIP (1.75%)",
+          "total": "$7,452",
+          "ambiguous": []
+        },
+        "VA": {
+          "rate": "6.125",
+          "eligible": true,
+          "baseLoan": "$778,540",
+          "totalLoan": "$788,272",
+          "pi": "$6,705",
+          "mi": null,
+          "miLabel": null,
+          "upfront": "$9,732",
+          "upfrontLabel": "Funding Fee (1.25%)",
+          "total": "$7,105",
+          "ambiguous": []
+        },
+        "USDA": {
+          "eligible": false,
+          "reason": "USDA 30-Year Only"
+        }
+      }
+    },
+    {
+      "id": "FHA-15y-hb-22",
+      "title": "15 years, high balance, 22% down on $998,000 (LTV exactly 78%)",
+      "price": 998000,
+      "downPct": "22",
+      "term": 15,
+      "rates": {
+        "Conventional": "6.500",
+        "FHA": "6.250",
+        "VA": "6.125",
+        "USDA": "6.250"
+      },
+      "vaUsage": "first",
+      "taxes": 300,
+      "insurance": 100,
+      "expected": {
+        "Conventional": {
+          "rate": "6.500",
+          "eligible": true,
+          "baseLoan": "$778,440",
+          "totalLoan": "$778,440",
+          "pi": "$6,781",
+          "mi": null,
+          "miLabel": null,
+          "upfront": null,
+          "upfrontLabel": null,
+          "total": "$7,181",
+          "ambiguous": []
+        },
+        "FHA": {
+          "rate": "6.250",
+          "eligible": true,
+          "baseLoan": "$778,440",
+          "totalLoan": "$792,063",
+          "pi": "$6,791",
+          "mi": "$97",
+          "miLabel": "MIP (0.15%)",
+          "upfront": "$13,623",
+          "upfrontLabel": "UFMIP (1.75%)",
+          "total": "$7,289",
+          "ambiguous": []
+        },
+        "VA": {
+          "rate": "6.125",
+          "eligible": true,
+          "baseLoan": "$778,440",
+          "totalLoan": null,
+          "pi": "$6,704",
+          "mi": null,
+          "miLabel": null,
+          "upfront": null,
+          "upfrontLabel": "Funding Fee (1.25%)",
+          "total": "$7,104",
+          "ambiguous": [
+            "totalLoan",
+            "upfront"
+          ]
+        },
+        "USDA": {
+          "eligible": false,
+          "reason": "USDA 30-Year Only"
         }
       }
     },

@@ -87,6 +87,7 @@ test.describe("calculation accuracy against the independent reference", () => {
     }
   });
 
+  // A2 is also the D-5 regression: 15 years at 10% down is HUD's 0.15% band.
   test("A2: settings arrive in the link; the rate in the link applies to FHA only", async ({ page }) => {
     const s = scenario("A2");
     const calc = new CalculatorPage(page);
@@ -106,14 +107,14 @@ test.describe("calculation accuracy against the independent reference", () => {
     await expect(calc.row(conv, "Principal & Interest")).toHaveText(s.expected.Conventional.pi!); // $288,000 / 360
   });
 
-  test("D-6 characterization: a high-balance FHA loan uses the standard MIP rate", async ({ page }) => {
+  test("D-6 regression: a high-balance FHA loan uses HUD's high-balance MIP rate", async ({ page }) => {
     const s = scenario("D6");
     const calc = new CalculatorPage(page);
     await calc.open();
     await enter(calc, s);
     await expectCards(calc, s);
     const fha = await calc.breakdown("FHA");
-    // Today: "MIP (0.5%)". HUD ML 2023-05: 0.70% for a base loan over $726,200 at 90% LTV.
-    await expect(fha.getByText(s.expected.FHA.knownDefect!.app.miLabel, { exact: true })).toBeVisible();
+    // HUD ML 2023-05: 0.70% for a base loan over $726,200 at 90% LTV (was 0.5%, D-6).
+    await expect(fha.getByText(s.expected.FHA.miLabel!, { exact: true })).toBeVisible();
   });
 });

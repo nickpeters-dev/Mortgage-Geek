@@ -31,10 +31,10 @@ Nothing here imports or mirrors the JavaScript. Each rule cites where it comes f
                A scenario whose cents land within $0.01 of .50 is REFUSED: a test there could
                pass or fail on floating-point noise.
 
-Known defects: where the app is documented as wrong (QA_DEFECT_LOG.md D-5, D-6), the
-scenario records BOTH the correct value (from the source) and the app's documented
-behavior, marked with the defect ID. Tests assert the app's behavior as a
-characterization and print the correct value, until the defect is fixed.
+Known defects: when the app is documented as wrong, a scenario can record BOTH the
+correct value and the app's documented behavior under "knownDefect" (the test then
+characterizes it). None are open for the calculator: D-5 and D-6 (FHA MIP by term and
+loan size) were fixed on 2026-11-25 and now assert the HUD values directly.
 """
 import json
 from decimal import Decimal as D, ROUND_HALF_UP, getcontext
@@ -59,12 +59,6 @@ def fha_annual_mip_pct(term, base_loan, ltv):
         if ltv <= max_ltv:
             return D(bps) / 100
     raise ValueError("LTV above 100%")
-
-
-def fha_app_mip_pct(down_pct):
-    """The app's DOCUMENTED DEFECTIVE behavior (D-5, D-6): the 30-year standard-size row
-    applied to every loan. Written from the defect description, not from the JS."""
-    return D("0.55") if D(down_pct) < 5 else D("0.5")
 
 
 def va_fee_pct(usage, down_pct):
@@ -146,21 +140,6 @@ def program_result(program, s):
         mi_pct = fha_annual_mip_pct(term, base, ltv)
         upfront, upfront_label = base * D("0.0175"), "UFMIP (1.75%)"
         mi_label = f"MIP ({pct_label(mi_pct)}%)"
-        app_pct = fha_app_mip_pct(down_pct)
-        if app_pct != mi_pct:
-            defect = "D-5" if term <= 15 else "D-6"
-            loan = base + upfront
-            app_mi = base * app_pct / 100 / 12
-            app_total = payment(loan, rate, term) + app_mi + escrow
-            out["knownDefect"] = {
-                "id": defect,
-                # Documentation of the gap, exact to the cent:
-                "correct": {"miLabel": mi_label, "mi": cents(base * mi_pct / 100 / 12),
-                            "total": cents(payment(loan, rate, term) + base * mi_pct / 100 / 12 + escrow)},
-                # What the page shows today (asserted by the characterization test):
-                "app": {"miLabel": f"MIP ({pct_label(app_pct)}%)", "mi": cents(app_mi),
-                        "total": dollars(app_total, f"{s['id']} {program} app total")},
-            }
     elif program == "VA":
         fee = va_fee_pct(s.get("vaUsage", "first"), down_pct)
         mi_pct, upfront = D(0), base * fee / 100
@@ -232,6 +211,13 @@ SCENARIOS = [
     scenario("A4", "0% interest: P&I is the loan divided by 360", 360000, "20",
              rates={"Conventional": "0", "FHA": "0", "VA": "0", "USDA": "0"}),
     scenario("D6", "high-balance FHA: $900,000, 10% down (base loan $810,000)", 900000, "10"),
+    # FHA MIP boundaries (HUD ML 2023-05): base loan threshold and the 15-year LTV bands.
+    scenario("FHA-base-726200", "base loan exactly $726,200 (20% down on $907,750)", 907750, "20"),
+    scenario("FHA-base-726201", "base loan $726,201.60 (20% down on $907,752)", 907752, "20"),
+    scenario("FHA-15y-9.99", "15 years, 9.99% down on $400,000 (LTV over 90%)", 400000, "9.99", term=15),
+    scenario("FHA-15y-10", "15 years, 10% down on $400,000 (LTV exactly 90%)", 400000, "10", term=15),
+    scenario("FHA-15y-hb-21.99", "15 years, high balance, 21.99% down on $998,000", 998000, "21.99", term=15),
+    scenario("FHA-15y-hb-22", "15 years, high balance, 22% down on $998,000 (LTV exactly 78%)", 998000, "22", term=15),
 ]
 # Boundary value analysis on the down payment, one scenario per edge, both sides.
 for d in ["2.99", "3", "3.49", "3.5", "4.99", "5", "9.99", "10", "19.99", "20"]:

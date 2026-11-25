@@ -12,6 +12,8 @@
 //   FHA MIP for life -> 11 yrs  10%      9.99%        HUD ML 2023-05 (90.00% LTV)
 //   PMI tiers (site assumption) 5/10/20% 4.99/9.99/19.99%
 //   VA funding fee tiers        5%/10%   4.99/9.99%   va.gov (effective 2023-04-07)
+//   FHA MIP, high balance       base $726,200 vs $726,201.60   HUD ML 2023-05 (D-6)
+//   FHA MIP, 15-year LTV bands  10% / 9.99%; 22% / 21.99%       HUD ML 2023-05 (D-5)
 //
 // Expected totals come from tests/e2e/fixtures/expected.json (Python reference).
 import { test, expect } from "./support/test";
@@ -63,6 +65,19 @@ test.describe("down payment boundaries ($400,000, 30 years)", () => {
       await expect(calc.card("FHA").getByText(note)).toBeVisible();
     }
   });
+});
+
+test.describe("FHA annual MIP boundaries (HUD ML 2023-05; regressions for D-5 and D-6)", () => {
+  for (const id of ["FHA-base-726200", "FHA-base-726201", "FHA-15y-9.99", "FHA-15y-10", "FHA-15y-hb-21.99", "FHA-15y-hb-22"]) {
+    test(`${id}: MIP label and FHA total`, async ({ page }) => {
+      const s = get(id);
+      const calc = await openWith(page, s);
+      const e = s.expected.FHA;
+      await expect(calc.total("FHA")).toHaveText(e.total!);
+      const scope = await calc.breakdown("FHA");
+      await expect(scope.getByText(e.miLabel!, { exact: true })).toBeVisible();
+    });
+  }
 });
 
 test.describe("VA funding fee by usage (0% down, $400,000)", () => {

@@ -28,7 +28,7 @@ export function computeMonthlyPayment({
   insurance = 0,
   hoa = 0,
 }) {
-  const t = resolveProgram({ program, price, downPct, downAmt, vaUsage });
+  const t = resolveProgram({ program, price, downPct, downAmt, vaUsage, term });
   const pi = generateAmortData(t.loan, rate, term).monthly;
   const mi = monthlyMI(t.baseLoan, t.miRate);
   const total = pi + mi + taxes + insurance + hoa;
