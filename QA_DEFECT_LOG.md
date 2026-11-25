@@ -29,7 +29,7 @@ is fixed or changes shape.
 | D-6 | FHA annual MIP ignores loan size: base loans over $726,200 charged the standard rate | High | Fixed (2026-11-25) | 2026-11-25: approved; fixed in the calculator, Rent vs Own and PreQual |
 | D-7 | Keyboard entry in comma-formatted fields appends instead of replacing (Chrome, Edge) | Medium | Fixed (2026-11-25) | 2026-11-25: approved |
 | D-8 | PreQual's default location resets to the first county in the list (Anderson County), not Nashville/Davidson | Medium | Open | Found while fixing D-6 |
-| R-6 | PreQual USDA rate never live; must equal FHA (owner's rule) | High | Open, fix needed | 2026-11-25: USDA always matches FHA on every page. Backlog |
+| R-6 | PreQual USDA rate never live; must equal FHA (owner's rule) | High | Fixed (2026-11-25) | 2026-11-25: USDA always matches FHA on every page |
 | R-1 | Rate API failure shows hardcoded rates credited to Mortgage News Daily | Medium | Open, fix needed | 2026-11-25: fall back to the last good (e.g. yesterday's) rate, dated. Backlog |
 | R-2 to R-5, R-7 | Other rate-source findings (see QA_RATE_SOURCES.md) | Low to Medium | Open, for reference | Backlog |
 
