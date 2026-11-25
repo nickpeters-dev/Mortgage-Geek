@@ -16,8 +16,9 @@ Nothing here imports or mirrors the JavaScript. Each rule cites where it comes f
                2026-11-25: first use 2.15 / 1.5 / 1.25%, after first use 3.3 / 1.5 / 1.25%
                (under 5% / 5% or more / 10% or more down); exempt (service-connected
                disability) 0%. No monthly mortgage insurance.
-  USDA         1.00% upfront guarantee fee, 0.35% annual fee, 30-year fixed only.
-               UNVERIFIED for FY2026: the USDA pages refused automated access. Owner to confirm.
+  USDA         1.00% upfront guarantee fee, 0.35% annual fee, 30-year fixed only. FY2026 fees
+               confirmed by the owner (licensed MLO) on 2026-11-25; the USDA pages refused
+               automated access, so no page was read.
   Conventional PMI tiers are the SITE'S OWN ASSUMPTION (the page says "PMI est. based on 740+
                FICO, <43% DTI"); there is no regulated rate. Used here as a stated input:
                under 5% down 0.52%, 5% to 9.99% 0.37%, 10% to 19.99% 0.27%, 20%+ none.
