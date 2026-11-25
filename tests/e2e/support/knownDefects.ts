@@ -7,8 +7,6 @@
 // production-routing.http.spec.ts) asserting its exact documented signature.
 // When a defect is fixed, that test fails, and its allowance here is removed in
 // the same change.
-import { existsSync } from "node:fs";
-
 export type ServedDocument = { url: string; html: string };
 
 // D-2 signature: HTML entities inside a <style> element. Browsers do not decode
@@ -39,26 +37,8 @@ export function explainByKnownDefect(
   const notFound = error.match(/^HTTP 404 (\S+)$/);
   if (notFound && d2Docs.some((d) => new URL("&", d.url).href === notFound[1])) return "D-2";
 
-  // D-3a: /manifest.json is not in the build. Only that exact URL, and only
-  // while the file is really absent from the build output.
-  if (
-    notFound &&
-    notFound[1] === new URL("/manifest.json", ctx.baseURL).href &&
-    !existsSync("build/client/manifest.json")
-  ) {
-    return "D-3a";
-  }
-
   return null;
 }
-
-// D-4: public pages whose title is an <h2> with no <h1>, and the exact title
-// each one shows. The smoke test asserts this documented state instead of
-// skipping the heading check: a renamed or removed title, or a new h1, fails.
-export const ROUTES_WITHOUT_H1: Record<string, string> = {
-  "/jargon-decoder": "Jargon Decoder",
-  "/pre-approval-checklist": "Pre-Approval Checklist",
-};
 
 // D-1: exact NUL byte counts in prerendered HTML. Every other route must have 0.
 export const KNOWN_NUL_BYTES: Record<string, number> = {

@@ -40,14 +40,6 @@ test("D-2: only the exact relative '&' URL 404 is tolerated, and only for a brok
   expect(explainByKnownDefect(`HTTP 500 ${BASE}/&`, { baseURL: BASE, documents: [brokenPage] })).toBeNull();
 });
 
-test("D-3a: only a 404 for exactly /manifest.json is tolerated", () => {
-  const ctx = { baseURL: BASE, documents: [cleanPage] };
-  expect(explainByKnownDefect(`HTTP 404 ${BASE}/manifest.json`, ctx)).toBe("D-3a");
-  expect(explainByKnownDefect(`HTTP 404 ${BASE}/geeklog.webmanifest`, ctx)).toBeNull();
-  expect(explainByKnownDefect(`HTTP 404 ${BASE}/manifest.json?v=2`, ctx)).toBeNull();
-  expect(explainByKnownDefect(`HTTP 500 ${BASE}/manifest.json`, ctx)).toBeNull();
-});
-
 test("unrelated errors are never explained", () => {
   const ctx = { baseURL: BASE, documents: [brokenPage] };
   for (const e of [
@@ -55,6 +47,8 @@ test("unrelated errors are never explained", () => {
     "uncaught exception: NaN payment",
     `HTTP 404 ${BASE}/assets/entry.client.js`,
     `HTTP 501 ${BASE}/api/prospects`,
+    // D-3a (fixed): a missing manifest is a real failure again.
+    `HTTP 404 ${BASE}/manifest.json`,
   ]) {
     expect(explainByKnownDefect(e, ctx), e).toBeNull();
   }

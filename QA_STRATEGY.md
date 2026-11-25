@@ -198,20 +198,23 @@ eligibility answer is the costliest failure this site can have, so those get the
 
 | Spec | Tests | What it proves |
 |---|---|---|
-| `smoke.spec.ts` | 39 per browser project (78 total) | All 38 public routes: HTTP 200, no redirect, hydrates, one visible h1, own title survives hydration, no console errors or failed requests. Plus refresh on a nested route. |
+| `smoke.spec.ts` | 40 per browser project (80 total) | All 38 public routes: HTTP 200, no redirect, hydrates, one visible h1, own title survives hydration, no console errors or failed requests. Plus refresh on a nested route. |
 | `production-routing.http.spec.ts` | 44 | Direct hit on a nested route serves its own HTML, query strings, vercel.json redirect and rewrite, unknown URL is 404, no NUL bytes in any prerendered page |
 | `production-routing.http.spec.ts` (cont.) | | Case-sensitive paths, as on Vercel |
-| `known-defects.spec.ts` | 5 per browser project (10 total) | Characterization of D-2, D-3a, D-3b |
+| `known-defects.spec.ts` | 4 per browser project (8 total) | Characterization of D-2, D-3b |
 | `known-defects.http.spec.ts` | 1 | D-1 characterized in React itself (no site code), so a React upgrade that fixes it is noticed |
+| `rate-sources.spec.ts` | 16 per browser project (32 total) | Live, fallback, partial, stale and manual rates on the calculator, PreQual and Cash to Close (QA_RATE_SOURCES.md) |
 | `calculator.math.spec.ts` | 5 per browser project (10 total) | Card totals and breakdown lines against the Python reference (`tests/reference/e2e_expected.py`): defaults, link parameters, 0% rate, D-5/D-6 characterizations |
 | `calculator.programs.spec.ts` | 15 per browser project (30 total) | Down-payment boundary value analysis (10 edges) for all four programs, FHA duration note, VA usage, USDA 30-year rule |
 | `calculator.inputs.spec.ts` | 6 per browser project (12 total) | Percent/dollar sync, clamping, formatting, empty field, D-7 characterization |
-| `known-defect-allowances.http.spec.ts` | 6 | Each allowance applies only with its evidence and rejects look-alikes |
+| `known-defect-allowances.http.spec.ts` | 5 | Each allowance applies only with its evidence and rejects look-alikes |
+| `pwa-manifest.http.spec.ts` | 42 | D-3a regression: manifest served and valid, icons at declared sizes, launch and shortcut URLs load, linked from every public page, Geek Log manifest intact |
+| `pwa-manifest.spec.ts` | 1 (Chromium only; skipped on WebKit) | Chromium parses the linked manifest as a standalone app |
 
-Total: 191 tests, about 27 seconds locally including the build.
+Total: 265 tests plus 1 skip, about 50 seconds locally including the build.
 
 Mutation checks (2026-11-24), each caught by the intended test: an injected `console.error`;
-a deleted page title; an undocumented NUL-byte page; a missing image on a page carrying D-2
+a deleted page title; an undocumented NUL-byte page; the manifest moved back out of `public/` (43 failures); a missing image on a page carrying D-2
 (proves the D-2 allowance does not cover other 404s); a renamed D-4 title; a new `<h1>` on a
 D-4 page; USDA annual fee 0.35 -> 0.36% and VA first-use fee 2.15 -> 2.2% (calculator totals);
 a NaN card total (broken-number guard).
