@@ -7,6 +7,17 @@ purpose, its test is rewritten to assert the approved behavior, in the same chan
 Reviewed 2026-11-24 against `test/playwright-e2e` (code reading, browser tests with mocked
 responses, and the live `/api/rates`).
 
+## Decisions (2026-11-25, owner)
+
+| ID | Decision | Status |
+|---|---|---|
+| R-6 | **USDA always equals the FHA rate**, on every page. Mortgage News Daily may not publish USDA, and USDA prices at or below FHA, so matching FHA is the conservative choice. This is already the calculator's and Cash to Close's rule; PreQual must follow it | Fix needed (backlog) |
+| R-1 | When live rates fail, **auto-populate with the last good rate (for example yesterday's)**, dated, instead of hardcoded defaults (recommendation 6 below) | Fix needed (backlog) |
+| R-2 to R-5, R-7 | Logged for reference | Backlog, not yet prioritized |
+
+When a fix lands, its `R-n` test is rewritten to assert the decided behavior (for R-6: PreQual
+USDA shows the FHA value, 6.625 in the test fixture).
+
 ## 1. How a rate reaches the page
 
 ```

@@ -25,7 +25,9 @@ is fixed or changes shape.
 | D-1 | Prerendering inserts NUL bytes before some multi-byte characters | Low | Deferred | No workaround. Fix with the React 19 upgrade; a React-only test verifies the upgrade |
 | D-4 | Two public pages have no `<h1>` | Low | Fix in progress | Approved: small isolated fix, no visual change |
 | T-1 | Test defect: page HTML read from the browser inspector cache (flaky on WebKit in CI) | Medium (test) | Fixed | Found by the flaky gate on its first CI run |
-| R-1 to R-7 | Rate sources: silent fallback, partial data, overwritten manual rates, PreQual USDA never live (R-6, High) | Medium to High | Under review | Documented in QA_RATE_SOURCES.md; do not change rate behavior until reviewed |
+| R-6 | PreQual USDA rate never live; must equal FHA (owner's rule) | High | Open, fix needed | 2026-11-25: USDA always matches FHA on every page. Backlog |
+| R-1 | Rate API failure shows hardcoded rates credited to Mortgage News Daily | Medium | Open, fix needed | 2026-11-25: fall back to the last good (e.g. yesterday's) rate, dated. Backlog |
+| R-2 to R-5, R-7 | Other rate-source findings (see QA_RATE_SOURCES.md) | Low to Medium | Open, for reference | Backlog |
 
 ---
 
