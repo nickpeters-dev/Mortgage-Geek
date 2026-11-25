@@ -202,9 +202,10 @@ eligibility answer is the costliest failure this site can have, so those get the
 | `production-routing.http.spec.ts` | 44 | Direct hit on a nested route serves its own HTML, query strings, vercel.json redirect and rewrite, unknown URL is 404, no NUL bytes in any prerendered page |
 | `production-routing.http.spec.ts` (cont.) | | Case-sensitive paths, as on Vercel |
 | `known-defects.spec.ts` | 5 per browser project (10 total) | Characterization of D-2, D-3a, D-3b |
+| `known-defects.http.spec.ts` | 1 | D-1 characterized in React itself (no site code), so a React upgrade that fixes it is noticed |
 | `known-defect-allowances.http.spec.ts` | 6 | Each allowance applies only with its evidence and rejects look-alikes |
 
-Total: 138 tests, about 27 seconds locally including the build.
+Total: 139 tests, about 27 seconds locally including the build.
 
 Mutation checks (2026-11-24), each caught by the intended test: an injected `console.error`;
 a deleted page title; an undocumented NUL-byte page; a missing image on a page carrying D-2
