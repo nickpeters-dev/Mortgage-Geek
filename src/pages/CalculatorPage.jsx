@@ -863,7 +863,7 @@ export function CalculatorPage() {
           </div>
 
         {/* Side-by-side cards */}
-        <div className="calc-cards-grid" data-count={visibleProgramsList.length}>
+        <div className="calc-cards-grid" role="group" aria-label="Monthly payment by loan program" data-count={visibleProgramsList.length}>
           {visibleProgramsList.map((prog, i) => {
             const isBest = prog.eligible && prog.total === lowestTotal;
 
@@ -1548,7 +1548,7 @@ export function CalculatorPage() {
           canvas={
             <>
               {/* Compact program cards row */}
-              <div className="calc-cockpit-cards" data-count={visibleProgramsList.length}>
+              <div className="calc-cockpit-cards" role="group" aria-label="Monthly payment by loan program" data-count={visibleProgramsList.length}>
                 {visibleProgramsList.map((prog) => (
                   <ProgramCardCompact
                     key={prog.name}
