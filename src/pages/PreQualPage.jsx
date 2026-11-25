@@ -75,7 +75,7 @@ export function PreQualPage() {
         if (data.success && data.rates) {
           const find = (label) => data.rates.find((r) => r.label.toLowerCase().includes(label));
           const conv30 = find("30-year fixed"); const conv15 = find("15-year fixed");
-          const fha = find("fha"); const va = find("va"); const usda = find("usda");
+          const fha = find("fha"); const va = find("va");
           const r30 = conv30 ? roundRate(parseFloat(conv30.rate)) : 6.75;
           const r15 = conv15 ? roundRate(parseFloat(conv15.rate)) : 6.0;
           setConvRate30Api(r30);
@@ -85,16 +85,17 @@ export function PreQualPage() {
             const fhaParsed = roundRate(parseFloat(fha.rate));
             setFhaRate(fhaParsed);
             setFhaRateApi(fhaParsed);
+            // USDA always follows FHA (owner's rule, 2026-11-25): Mortgage News
+            // Daily publishes no USDA rate, and USDA prices at or below FHA, so
+            // matching FHA is the conservative choice. Same rule as the
+            // calculator and Cash to Close (QA_RATE_SOURCES.md R-6).
+            setUsdaRate(fhaParsed);
+            setUsdaRateApi(fhaParsed);
           }
           if (va) {
             const vaParsed = roundRate(parseFloat(va.rate));
             setVaRate(vaParsed);
             setVaRateApi(vaParsed);
-          }
-          if (usda) {
-            const usdaParsed = roundRate(parseFloat(usda.rate));
-            setUsdaRate(usdaParsed);
-            setUsdaRateApi(usdaParsed);
           }
           setRateSource(data.date || "today"); setRatesLoaded(true);
         }

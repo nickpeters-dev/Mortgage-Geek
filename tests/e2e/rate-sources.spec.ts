@@ -188,13 +188,15 @@ test.describe("PreQual and Cash to Close share the fallback logic", () => {
   test.describe("live rates", () => {
     test.use({ ratesResponse: LIVE });
 
-    test("R-6: PreQual keeps the built-in USDA rate under a 'Live' badge (the calculator uses FHA's)", async ({ page }) => {
-      await gotoHydrated(page, "/prequal");
-      await expect(page.getByText(LIVE_BADGE)).toBeVisible();
-      await expect(rateField(page, "FHA")).toHaveValue("6.625");
-      // PreQual looks for a "usda" entry, which /api/rates never returns.
-      await expect(rateField(page, "USDA")).toHaveValue("6.250");
-    });
+    // R-6 (fixed 2026-11-25): USDA always follows FHA, on every page.
+    for (const path of ["/prequal", "/calculator"]) {
+      test(`R-6 regression: ${path} shows the FHA rate for USDA`, async ({ page }) => {
+        await gotoHydrated(page, path);
+        await expect(page.getByText(LIVE_BADGE)).toBeVisible();
+        await expect(rateField(page, "FHA")).toHaveValue("6.625");
+        await expect(rateField(page, "USDA")).toHaveValue("6.625");
+      });
+    }
 
     test("Cash to Close shows live rates with a LIVE tag and the source date", async ({ page }) => {
       await gotoHydrated(page, "/cash-to-close");

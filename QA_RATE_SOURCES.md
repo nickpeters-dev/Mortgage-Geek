@@ -11,12 +11,14 @@ responses, and the live `/api/rates`).
 
 | ID | Decision | Status |
 |---|---|---|
-| R-6 | **USDA always equals the FHA rate**, on every page. Mortgage News Daily may not publish USDA, and USDA prices at or below FHA, so matching FHA is the conservative choice. This is already the calculator's and Cash to Close's rule; PreQual must follow it | Fix needed (backlog) |
+| R-6 | **USDA always equals the FHA rate**, on every page. Mortgage News Daily may not publish USDA, and USDA prices at or below FHA, so matching FHA is the conservative choice. This is already the calculator's and Cash to Close's rule; PreQual must follow it | **Fixed** on `fix/r6-prequal-usda` (pending merge) |
 | R-1 | When live rates fail, **auto-populate with the last good rate (for example yesterday's)**, dated, instead of hardcoded defaults (recommendation 6 below) | Fix needed (backlog) |
 | R-2 to R-5, R-7 | Logged for reference | Backlog, not yet prioritized |
 
-When a fix lands, its `R-n` test is rewritten to assert the decided behavior (for R-6: PreQual
-USDA shows the FHA value, 6.625 in the test fixture).
+When a fix lands, its `R-n` test is rewritten to assert the decided behavior. R-6: PreQual now
+sets USDA from the FHA rate; "R-6 regression" checks PreQual and the calculator both show the
+FHA value for USDA (6.625 in the test fixture). Without the fix the PreQual check fails in both
+browsers.
 
 ## 1. How a rate reaches the page
 
