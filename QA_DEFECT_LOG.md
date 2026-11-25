@@ -25,10 +25,10 @@ is fixed or changes shape.
 | D-1 | Prerendering inserts NUL bytes before some multi-byte characters | Low | Deferred | No workaround. Fix with the React 19 upgrade; a React-only test verifies the upgrade |
 | D-4 | Two public pages have no `<h1>` | Low | Fixed (2026-11-25) | Approved: small isolated fix, no visual change |
 | T-1 | Test defect: page HTML read from the browser inspector cache (flaky on WebKit in CI) | Medium (test) | Fixed | Found by the flaky gate on its first CI run |
-| D-5 | FHA annual MIP ignores loan term: 15-year loans charged the 30-year rate | Medium | Fixed on `fix/fha-mip` (pending merge) | 2026-11-25: approved; fixed with D-6 |
-| D-6 | FHA annual MIP ignores loan size: base loans over $726,200 charged the standard rate | High | Fixed on `fix/fha-mip` (pending merge) | 2026-11-25: approved; fixed in the calculator, Rent vs Own and PreQual |
+| D-5 | FHA annual MIP ignores loan term: 15-year loans charged the 30-year rate | Medium | Fixed (2026-11-25) | 2026-11-25: approved; fixed with D-6 |
+| D-6 | FHA annual MIP ignores loan size: base loans over $726,200 charged the standard rate | High | Fixed (2026-11-25) | 2026-11-25: approved; fixed in the calculator, Rent vs Own and PreQual |
+| D-7 | Keyboard entry in comma-formatted fields appends instead of replacing (Chrome, Edge) | Medium | Fixed (2026-11-25) | 2026-11-25: approved |
 | D-8 | PreQual's default location resets to the first county in the list (Anderson County), not Nashville/Davidson | Medium | Open | Found while fixing D-6 |
-| D-7 | Keyboard entry in comma-formatted fields appends instead of replacing (Chrome, Edge) | Medium | Open | Found in Phase 2. Not fixed; awaiting decision |
 | R-6 | PreQual USDA rate never live; must equal FHA (owner's rule) | High | Open, fix needed | 2026-11-25: USDA always matches FHA on every page. Backlog |
 | R-1 | Rate API failure shows hardcoded rates credited to Mortgage News Daily | Medium | Open, fix needed | 2026-11-25: fall back to the last good (e.g. yesterday's) rate, dated. Backlog |
 | R-2 to R-5, R-7 | Other rate-source findings (see QA_RATE_SOURCES.md) | Low to Medium | Open, for reference | Backlog |
@@ -380,6 +380,14 @@ rules against their published source before writing expected values.
   calculation tests are not blocked by D-7.
 - **Resolution criteria:** the Tab-and-type path gives $400,000 in Chromium and WebKit; the
   characterization test is rewritten to assert that for both.
+- **Fix (branch `fix/d7-keyboard-entry`, 2026-11-25):** `CalcInput` records on focus whether
+  the browser had selected the whole field and, if so, selects it again after the text is
+  rewritten (`useEffect`, which React 18 flushes synchronously for focus events; no SSR
+  warning). Clicking still places the caret. Shared by the calculator, PreQual, Cash to Close
+  and Rent vs Own.
+- **Verification:** regression tests in `calculator.inputs.spec.ts` (Tab into Home Price and
+  into Down Payment $, both browsers; caret editing unchanged). Without the fix both Chromium
+  tests fail with $99,999,999.
 
 ## D-8: PreQual's default location resets to the first county in the list
 

@@ -45,11 +45,8 @@ export class CalculatorPage {
   // Type into a field the way a mouse user does: click, select all, type, leave
   // the field (the page formats and clamps values on blur).
   //
-  // Not locator.fill(): in Chromium, focusing a comma-formatted field rewrites
-  // its text ("350,000" -> "350000"), which drops the selection, so new digits
-  // are appended (defect D-7, characterized in calculator.inputs.spec.ts). Using
-  // fill() here would make every calculation test fail on D-7 instead of
-  // checking the math.
+  // Mouse-style entry on purpose; keyboard (Tab) entry has its own regression
+  // tests for D-7 in calculator.inputs.spec.ts.
   private async type(field: Locator, value: string | number) {
     await field.click();
     await field.press("ControlOrMeta+a");

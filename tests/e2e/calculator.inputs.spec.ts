@@ -64,23 +64,32 @@ test.describe("formatting and empty fields", () => {
   });
 });
 
-test.describe("D-7: keyboard entry in comma-formatted fields", () => {
-  test("D-7 characterization: Tab into Home Price and type a new price", async ({ page, browserName }) => {
+test.describe("D-7 regression: keyboard entry in comma-formatted fields", () => {
+  // Tab selects the field's text; typing must replace it in every browser.
+  // (Before the fix, Chrome and Edge appended: "350000" + "400000", clamped to $99,999,999.)
+  for (const [label, typed, shown] of [["Home Price", "400000", "400,000"], ["Down Payment $", "20000", "20,000"]] as const) {
+    test(`Tab into ${label} and type: the typed value replaces the old one`, async ({ page }) => {
+      const calc = new CalculatorPage(page);
+      await calc.open();
+      const field = page.getByLabel(label, { exact: true });
+      await field.focus();
+      await page.keyboard.press("Shift+Tab");
+      await page.keyboard.press("Tab");
+      await page.keyboard.type(typed);
+      await page.keyboard.press("Tab");
+      await expect(field).toHaveValue(shown);
+    });
+  }
+
+  test("editing at the caret still works (the fix only restores a whole-field selection)", async ({ page }) => {
     const calc = new CalculatorPage(page);
     await calc.open();
     const price = page.getByLabel("Home Price", { exact: true });
-    await price.focus();
-    await page.keyboard.press("Shift+Tab");
-    await page.keyboard.press("Tab"); // the browser selects the field's text on Tab
-    await page.keyboard.type("400000");
-    await page.keyboard.press("Tab");
-    if (browserName === "chromium") {
-      // Current behavior (D-7): the text is rewritten on focus, the selection is
-      // lost, "400000" is appended to "350000", and the result is clamped.
-      test.info().annotations.push({ type: "known-defect", description: "D-7: Chrome/Edge keyboard entry appends instead of replacing" });
-      await expect(price).toHaveValue("99,999,999");
-    } else {
-      await expect(price).toHaveValue("400,000");
-    }
+    await price.click();
+    await price.press("End");
+    await price.press("Backspace");
+    await price.pressSequentially("1");
+    await price.blur();
+    await expect(price).toHaveValue("350,001");
   });
 });
