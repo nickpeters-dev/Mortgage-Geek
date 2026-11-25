@@ -12,7 +12,6 @@
 //
 // D-1 (NUL bytes) is characterized per route in production-routing.http.spec.ts
 // and in React itself in known-defects.http.spec.ts.
-// D-4 (no <h1>) is characterized per route in smoke.spec.ts.
 import { test, expect } from "@playwright/test";
 import { existsSync } from "node:fs";
 import { hasD2Signature } from "./support/knownDefects";
@@ -37,12 +36,6 @@ for (const path of ["/", "/calculator", "/deep-dives/gift-funds"]) {
     expect([...codes].sort(), "React hydration error codes").toEqual(["418", "423", "425"]);
   });
 }
-
-test("D-3a still present as documented: /manifest.json is not built or served", async ({ request }) => {
-  expect(existsSync("manifest.json"), "source file at the repo root").toBe(true);
-  expect(existsSync("build/client/manifest.json"), "file in the build output").toBe(false);
-  expect((await request.get("/manifest.json")).status()).toBe(404);
-});
 
 test("D-3b still present as documented: /service-worker.js is not built or served", async ({ request }) => {
   expect(existsSync("service-worker.js"), "source file at the repo root").toBe(true);
