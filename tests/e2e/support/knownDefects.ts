@@ -7,8 +7,6 @@
 // production-routing.http.spec.ts) asserting its exact documented signature.
 // When a defect is fixed, that test fails, and its allowance here is removed in
 // the same change.
-import { existsSync } from "node:fs";
-
 export type ServedDocument = { url: string; html: string };
 
 // D-2 signature: HTML entities inside a <style> element. Browsers do not decode
@@ -38,16 +36,6 @@ export function explainByKnownDefect(
   // page. Only that exact URL, only for a page carrying the signature.
   const notFound = error.match(/^HTTP 404 (\S+)$/);
   if (notFound && d2Docs.some((d) => new URL("&", d.url).href === notFound[1])) return "D-2";
-
-  // D-3a: /manifest.json is not in the build. Only that exact URL, and only
-  // while the file is really absent from the build output.
-  if (
-    notFound &&
-    notFound[1] === new URL("/manifest.json", ctx.baseURL).href &&
-    !existsSync("build/client/manifest.json")
-  ) {
-    return "D-3a";
-  }
 
   return null;
 }

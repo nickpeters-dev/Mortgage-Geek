@@ -201,14 +201,16 @@ eligibility answer is the costliest failure this site can have, so those get the
 | `smoke.spec.ts` | 39 per browser project (78 total) | All 38 public routes: HTTP 200, no redirect, hydrates, one visible h1, own title survives hydration, no console errors or failed requests. Plus refresh on a nested route. |
 | `production-routing.http.spec.ts` | 44 | Direct hit on a nested route serves its own HTML, query strings, vercel.json redirect and rewrite, unknown URL is 404, no NUL bytes in any prerendered page |
 | `production-routing.http.spec.ts` (cont.) | | Case-sensitive paths, as on Vercel |
-| `known-defects.spec.ts` | 5 per browser project (10 total) | Characterization of D-2, D-3a, D-3b |
+| `known-defects.spec.ts` | 4 per browser project (8 total) | Characterization of D-2, D-3b |
 | `known-defects.http.spec.ts` | 1 | D-1 characterized in React itself (no site code), so a React upgrade that fixes it is noticed |
-| `known-defect-allowances.http.spec.ts` | 6 | Each allowance applies only with its evidence and rejects look-alikes |
+| `known-defect-allowances.http.spec.ts` | 5 | Each allowance applies only with its evidence and rejects look-alikes |
+| `pwa-manifest.http.spec.ts` | 42 | D-3a regression: manifest served and valid, icons at declared sizes, launch and shortcut URLs load, linked from every public page, Geek Log manifest intact |
+| `pwa-manifest.spec.ts` | 1 (Chromium only; skipped on WebKit) | Chromium parses the linked manifest as a standalone app |
 
-Total: 139 tests, about 27 seconds locally including the build.
+Total: 181 tests plus 1 skip, about 27 seconds locally including the build.
 
 Mutation checks (2026-11-24), each caught by the intended test: an injected `console.error`;
-a deleted page title; an undocumented NUL-byte page; a missing image on a page carrying D-2
+a deleted page title; an undocumented NUL-byte page; the manifest moved back out of `public/` (43 failures); a missing image on a page carrying D-2
 (proves the D-2 allowance does not cover other 404s); a renamed D-4 title; a new `<h1>` on a
 D-4 page.
 
