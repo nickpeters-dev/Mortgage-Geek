@@ -196,6 +196,9 @@ eligibility answer is the costliest failure this site can have, so those get the
 
 ### Coverage today (Phase 1)
 
+For coverage by calculator, business rule and user workflow (and the known gaps), see
+QA_COVERAGE_MATRIX.md. The roadmap is in QA_ROADMAP.md.
+
 | Spec | Tests | What it proves |
 |---|---|---|
 | `smoke.spec.ts` | 40 per browser project (80 total) | All 38 public routes: HTTP 200, no redirect, hydrates, one visible h1, own title survives hydration, no console errors or failed requests. Plus refresh on a nested route. |

@@ -29,6 +29,7 @@ is fixed or changes shape.
 | D-6 | FHA annual MIP ignores loan size: base loans over $726,200 charged the standard rate | High | Fixed (2026-11-25) | 2026-11-25: approved; fixed in the calculator, Rent vs Own and PreQual |
 | D-7 | Keyboard entry in comma-formatted fields appends instead of replacing (Chrome, Edge) | Medium | Fixed (2026-11-25) | 2026-11-25: approved |
 | D-8 | PreQual's default location resets to the first county in the list (Anderson County), not Nashville/Davidson | Medium | Open | Found while fixing D-6 |
+| D-9 | Cash to Close's estimated APR uses the pre-fix FHA MIP rule (a separate copy of the program rules) | High | Open | Found 2026-11-25 while building the business rules inventory. APR is a regulated disclosure term: fix wording and approach need owner review (CLAUDE.md tripwire 2) |
 | R-6 | PreQual USDA rate never live; must equal FHA (owner's rule) | High | Fixed (2026-11-25) | 2026-11-25: USDA always matches FHA on every page |
 | R-1 | Rate API failure shows hardcoded rates credited to Mortgage News Daily | Medium | Open, fix needed | 2026-11-25: fall back to the last good (e.g. yesterday's) rate, dated. Backlog |
 | R-2 to R-5, R-7 | Other rate-source findings (see QA_RATE_SOURCES.md) | Low to Medium | Open, for reference | Backlog |
@@ -404,6 +405,30 @@ rules against their published source before writing expected values.
   calculator, and caps FHA at the baseline limit for a Nashville buyer.
 - **Resolution criteria:** PreQual starts on Nashville/Davidson (or the owner's chosen
   default) and only resets the metro when the visitor changes the state.
+
+## D-9: Cash to Close's estimated APR uses the pre-fix FHA MIP rule
+
+- **Severity:** High (a wrong estimated APR on a page aimed at borrowers). **Found:** 2026-11-25,
+  while mapping where each business rule is implemented (QA_COVERAGE_MATRIX.md).
+- **Where:** `src/pages/CashToClosePage.jsx:519-533`. Cash to Close imports nothing from
+  `src/utils/mortgageMath.js`. It keeps its own copy of the FHA MIP, conventional PMI, USDA
+  annual fee, and (lines 276-286) the upfront fee and VA funding fee tables. The D-5/D-6 fix
+  changed the shared module only, so this copy still has the old rule:
+  `downPct < 5 ? 0.0055 : 0.0050`. It ignores the term (15-year bands) and the
+  $726,200 high-balance threshold.
+- **Reproduction:** in Cash to Close, choose FHA, a $900,000 price, 10% down, 30 years. The APR
+  calculation uses 0.50% MIP ($337.50 a month). The calculator correctly shows 0.70%
+  ($472.50).
+- **Impact:** the estimated APR is understated for high-balance FHA loans and overstated for
+  15-year FHA loans. In one sample scenario ($810,000 base loan, 6.625%), the 0.70% premium
+  gives an APR about 0.16 percentage points higher than the 0.50% premium the page uses.
+- **Why the tests missed it:** Cash to Close has rate-source tests only; none of its numbers are
+  checked. The other copies (upfront fees, VA table, PMI tiers, USDA fee) match today's rules,
+  but they will drift the next time one changes.
+- **Resolution criteria (proposed, not approved):** Cash to Close takes its program rules from
+  `mortgageMath.js` (one implementation). Regression tests check the APR against an
+  independent reference at the FHA boundaries. Any change to the APR wording goes through the
+  owner first (APR is a Regulation Z term).
 
 ## Observations (not defects)
 
