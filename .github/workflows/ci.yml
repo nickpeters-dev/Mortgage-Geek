@@ -52,6 +52,12 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      # The browser tests' expected values come from a Python reference. Regenerate
+      # and compare, so expected.json can never be hand-edited to make a test pass.
+      - name: Expected values are current (regenerate and compare)
+        run: |
+          python3 tests/reference/e2e_expected.py
+          git diff --exit-code tests/e2e/fixtures/expected.json
       - name: Install Playwright browsers (Chromium, WebKit) and their system libraries
         run: npx playwright install --with-deps chromium webkit
       - name: Playwright suite (builds, serves, runs http + desktop + mobile projects)

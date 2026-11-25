@@ -141,6 +141,9 @@ export function CalculatorPage() {
   const [taxes, setTaxes] = useState(Math.round((350000 * (0.95 / 100)) / 12));
   const taxesInputId = useId();
   const termSelectId = useId();
+  // Program cards (mobile layout): each card is named by its program and
+  // described by its total, for assistive tech and stable test locators.
+  const cardIdPrefix = useId();
   const taxStateSelectId = useId();
   const vaUsageSelectId = useId();
   useEffect(() => { setTaxes(Math.round((homePrice * (taxRate / 100)) / 12)); }, [taxState, taxMetro, homePrice]);
@@ -860,16 +863,16 @@ export function CalculatorPage() {
           </div>
 
         {/* Side-by-side cards */}
-        <div className="calc-cards-grid" data-count={visibleProgramsList.length}>
+        <div className="calc-cards-grid" role="group" aria-label="Monthly payment by loan program" data-count={visibleProgramsList.length}>
           {visibleProgramsList.map((prog, i) => {
             const isBest = prog.eligible && prog.total === lowestTotal;
 
             if (!prog.eligible) {
               const reason = prog.ineligibleReason;
               return (
-                <div key={i} className="content-card" style={{ overflow: "hidden", position: "relative", opacity: 0.6 }}>
+                <div key={i} className="content-card" role="group" aria-labelledby={`${cardIdPrefix}-${prog.name}-name`} style={{ overflow: "hidden", position: "relative", opacity: 0.6 }}>
                   <div style={{ background: P.warmGrayLight, padding: "24px 20px", textAlign: "center" }}>
-                    <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.6)", marginBottom: 4 }}>{prog.name}</span>
+                    <span id={`${cardIdPrefix}-${prog.name}-name`} style={{ display: "block", fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.6)", marginBottom: 4 }}>{prog.name}</span>
                     <span style={{ fontFamily: F.display, fontSize: 28, color: "#fff" }}>Ineligible</span>
                   </div>
                   <div style={{ padding: "28px 20px", textAlign: "center" }}>
@@ -887,9 +890,9 @@ export function CalculatorPage() {
               const neededDown = homePrice - prog.loanLimit;
               const neededPct = homePrice > 0 ? (neededDown / homePrice) * 100 : 0;
               return (
-                <div key={i} className="content-card" style={{ overflow: "hidden", position: "relative", opacity: 0.65 }}>
+                <div key={i} className="content-card" role="group" aria-labelledby={`${cardIdPrefix}-${prog.name}-name`} style={{ overflow: "hidden", position: "relative", opacity: 0.65 }}>
                   <div style={{ background: P.warmGrayLight, padding: "24px 20px", textAlign: "center" }}>
-                    <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.6)", marginBottom: 4 }}>{prog.name}</span>
+                    <span id={`${cardIdPrefix}-${prog.name}-name`} style={{ display: "block", fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.6)", marginBottom: 4 }}>{prog.name}</span>
                     <span style={{ fontFamily: F.display, fontSize: 28, color: "#fff" }}>Over Loan Limit</span>
                   </div>
                   <div style={{ padding: "28px 20px", textAlign: "center" }}>
@@ -913,7 +916,7 @@ export function CalculatorPage() {
 
             const isSelected = selectedProgram === prog.name;
             return (
-              <div key={i} className="content-card" onClick={() => setSelectedProgram(isSelected ? null : prog.name)} style={{
+              <div key={i} className="content-card" role="group" aria-labelledby={`${cardIdPrefix}-${prog.name}-name`} aria-describedby={`${cardIdPrefix}-${prog.name}-total ${cardIdPrefix}-${prog.name}-rate`} onClick={() => setSelectedProgram(isSelected ? null : prog.name)} style={{
                 overflow: "hidden", position: "relative", cursor: "pointer",
                 border: isSelected ? `3px solid ${P.gold}` : `3px solid transparent`,
                 boxShadow: isSelected ? `0 0 0 4px rgba(207,51,56,0.15), 0 8px 30px rgba(0,0,0,0.12)` : undefined,
@@ -934,9 +937,9 @@ export function CalculatorPage() {
                       boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
                     }}>★ Lowest</span>
                   )}
-                  <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.6)", marginBottom: 4 }}>{prog.name}</span>
-                  <span style={{ fontFamily: F.display, fontSize: 40, color: "#fff" }}>{fmt(prog.total)}</span>
-                  <span style={{ display: "block", fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 2 }}>/month · {Number(prog.rate).toFixed(3)}% rate</span>
+                  <span id={`${cardIdPrefix}-${prog.name}-name`} style={{ display: "block", fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.6)", marginBottom: 4 }}>{prog.name}</span>
+                  <span id={`${cardIdPrefix}-${prog.name}-total`} data-testid="monthly-total" style={{ fontFamily: F.display, fontSize: 40, color: "#fff" }}>{fmt(prog.total)}</span>
+                  <span id={`${cardIdPrefix}-${prog.name}-rate`} style={{ display: "block", fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 2 }}>/month · {Number(prog.rate).toFixed(3)}% rate</span>
                   {/* Payment mode: this program's own solved price for the target
                       payment, in its own feature box within the colored header. */}
                   {prog.solvedPrice != null && (
@@ -1545,7 +1548,7 @@ export function CalculatorPage() {
           canvas={
             <>
               {/* Compact program cards row */}
-              <div className="calc-cockpit-cards" data-count={visibleProgramsList.length}>
+              <div className="calc-cockpit-cards" role="group" aria-label="Monthly payment by loan program" data-count={visibleProgramsList.length}>
                 {visibleProgramsList.map((prog) => (
                   <ProgramCardCompact
                     key={prog.name}
