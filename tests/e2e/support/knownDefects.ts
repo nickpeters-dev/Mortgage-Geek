@@ -1,0 +1,67 @@
+// The ONLY place the suite tolerates known production defects. Each allowance
+// is tied to one defect ID in QA_DEFECT_LOG.md and is CONDITIONAL: it applies
+// only when evidence of that exact defect is present in the page under test,
+// so it cannot wave through an unrelated failure that happens to look similar.
+//
+// Every open defect also has a characterization test (known-defects.spec.ts or
+// production-routing.http.spec.ts) asserting its exact documented signature.
+// When a defect is fixed, that test fails, and its allowance here is removed in
+// the same change.
+import { existsSync } from "node:fs";
+
+export type ServedDocument = { url: string; html: string };
+
+// D-2 signature: HTML entities inside a <style> element. Browsers do not decode
+// entities there, so their presence means the prerendered CSS is mangled.
+export function hasD2Signature(html: string): boolean {
+  for (const m of html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)) {
+    if (/&(#x27|quot|amp|gt|lt);/.test(m[1])) return true;
+  }
+  return false;
+}
+
+// Returns the defect ID that explains `error`, or null if no documented defect
+// does (in which case the test must fail).
+export function explainByKnownDefect(
+  error: string,
+  ctx: { baseURL: string; documents: ServedDocument[] },
+): string | null {
+  const d2Docs = ctx.documents.filter((d) => hasD2Signature(d.html));
+  const everyDocHasD2 = ctx.documents.length > 0 && d2Docs.length === ctx.documents.length;
+
+  // D-2: React hydration failure codes, tolerated only if EVERY page loaded in
+  // this test was served with the D-2 signature. A page whose CSS is fine gets
+  // no allowance, so a different hydration bug there fails the test.
+  if (/Minified React error #(418|423|425)\b/.test(error) && everyDocHasD2) return "D-2";
+
+  // D-2: the mangled @import url(&#x27;...) resolves to "&" relative to the
+  // page. Only that exact URL, only for a page carrying the signature.
+  const notFound = error.match(/^HTTP 404 (\S+)$/);
+  if (notFound && d2Docs.some((d) => new URL("&", d.url).href === notFound[1])) return "D-2";
+
+  // D-3a: /manifest.json is not in the build. Only that exact URL, and only
+  // while the file is really absent from the build output.
+  if (
+    notFound &&
+    notFound[1] === new URL("/manifest.json", ctx.baseURL).href &&
+    !existsSync("build/client/manifest.json")
+  ) {
+    return "D-3a";
+  }
+
+  return null;
+}
+
+// D-4: public pages whose title is an <h2> with no <h1>, and the exact title
+// each one shows. The smoke test asserts this documented state instead of
+// skipping the heading check: a renamed or removed title, or a new h1, fails.
+export const ROUTES_WITHOUT_H1: Record<string, string> = {
+  "/jargon-decoder": "Jargon Decoder",
+  "/pre-approval-checklist": "Pre-Approval Checklist",
+};
+
+// D-1: exact NUL byte counts in prerendered HTML. Every other route must have 0.
+export const KNOWN_NUL_BYTES: Record<string, number> = {
+  "/deep-dives/gift-funds": 3,
+  "/deep-dives/fha-manual-underwriting": 1,
+};

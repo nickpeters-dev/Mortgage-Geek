@@ -1,0 +1,12 @@
+{
+  "success": true,
+  "date": "Tuesday, January 6, 2026",
+  "source": "Mortgage News Daily",
+  "rates": [
+    { "label": "30-Year Fixed", "rate": "6.41", "change": null, "icon": "🏠" },
+    { "label": "15-Year Fixed", "rate": "5.62", "change": null, "icon": "⚡" },
+    { "label": "30-Year FHA", "rate": "6.10", "change": null, "icon": "🏛" },
+    { "label": "30-Year VA", "rate": "5.95", "change": null, "icon": "🎖" },
+    { "label": "30-Year Jumbo", "rate": "6.70", "change": null, "icon": "💎" }
+  ]
+}

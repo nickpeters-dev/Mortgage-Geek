@@ -30,3 +30,9 @@ prospects_seed*.json
 
 # Python bytecode from the reference scripts
 __pycache__/
+
+# Playwright output (reports, traces, screenshots)
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
