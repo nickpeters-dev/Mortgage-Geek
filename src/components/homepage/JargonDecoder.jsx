@@ -53,7 +53,7 @@ export function JargonDecoder({ standalone = false }) {
   return (
     <section id="glossary" className="section-bleed" style={{ padding: "64px 40px", background: P.creamDark }}>
       <div onClick={standalone ? undefined : () => setSectionOpen(!sectionOpen)} style={{ cursor: standalone ? "default" : "pointer" }}>
-        <SectionHeader eyebrow="Speak the Language" title={standalone ? "Jargon Decoder" : `Jargon Decoder ${sectionOpen ? "−" : "+"}`} subtitle={sectionOpen ? "Mortgages come with their own vocabulary. Here's every term you'll encounter, explained in plain language." : `Click to reveal ${terms.length} mortgage terms explained in plain language.`} />
+        <SectionHeader headingLevel={standalone ? 1 : 2} eyebrow="Speak the Language" title={standalone ? "Jargon Decoder" : `Jargon Decoder ${sectionOpen ? "−" : "+"}`} subtitle={sectionOpen ? "Mortgages come with their own vocabulary. Here's every term you'll encounter, explained in plain language." : `Click to reveal ${terms.length} mortgage terms explained in plain language.`} />
       </div>
       {sectionOpen && (
       <div style={{ maxWidth: 720 }}>

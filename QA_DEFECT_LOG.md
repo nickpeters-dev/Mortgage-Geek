@@ -20,14 +20,17 @@ is fixed or changes shape.
 | ID | Title | Severity | Status | Decision (2026-11-24) |
 |---|---|---|---|---|
 | D-2 | Prerendered `<style>` content is HTML-escaped; hydration fails on every page | Medium (was High) | Open, fix planned | Remediation branch scheduled after Phase 2 (sooner if it interferes with calculator testing). Priority raised within Medium: it masks every other hydration error |
-| D-3a | `/manifest.json` is not deployed | Medium | Open | Separated from D-3b. Fix proposed, awaiting approval |
+| D-3a | `/manifest.json` is not deployed | Medium | Fixed (2026-11-25) | Approved: separate branch; service worker stays off |
 | D-3b | `/service-worker.js` is not deployed | Low | Open | Do not enable until the caching strategy is reviewed |
 | D-1 | Prerendering inserts NUL bytes before some multi-byte characters | Low | Deferred | No workaround. Fix with the React 19 upgrade; a React-only test verifies the upgrade |
-| D-4 | Two public pages have no `<h1>` | Low | Fix in progress | Approved: small isolated fix, no visual change |
+| D-4 | Two public pages have no `<h1>` | Low | Fixed (2026-11-25) | Approved: small isolated fix, no visual change |
 | T-1 | Test defect: page HTML read from the browser inspector cache (flaky on WebKit in CI) | Medium (test) | Fixed | Found by the flaky gate on its first CI run |
 | D-5 | FHA annual MIP ignores loan term: 15-year loans charged the 30-year rate | Medium | Open | Found in Phase 2 rule review. Not fixed; awaiting decision |
 | D-6 | FHA annual MIP ignores loan size: base loans over $726,200 charged the standard rate | High | Open | Found in Phase 2 rule review. Not fixed; awaiting decision |
 | D-7 | Keyboard entry in comma-formatted fields appends instead of replacing (Chrome, Edge) | Medium | Open | Found in Phase 2. Not fixed; awaiting decision |
+| R-6 | PreQual USDA rate never live; must equal FHA (owner's rule) | High | Open, fix needed | 2026-11-25: USDA always matches FHA on every page. Backlog |
+| R-1 | Rate API failure shows hardcoded rates credited to Mortgage News Daily | Medium | Open, fix needed | 2026-11-25: fall back to the last good (e.g. yesterday's) rate, dated. Backlog |
+| R-2 to R-5, R-7 | Other rate-source findings (see QA_RATE_SOURCES.md) | Low to Medium | Open, for reference | Backlog |
 
 ---
 
@@ -96,7 +99,7 @@ is fixed or changes shape.
 - **Expected:** 200 with the web app manifest that every page links in `<head>`.
 - **Actual:** 404. The file is at the repo root; only `public/` is copied into `build/client`,
   which is Vercel's output directory.
-- **Root cause:** file location. `vercel.json` sets cache headers for `/manifest.json` and
+- **Root cause:** file location (a public file outside `public/`). `vercel.json` sets cache headers for `/manifest.json` and
   `src/root.jsx` links it, so it was intended to be served. Not established whether it ever
   was.
 - **Evidence:** live 404; absent from `build/client`; all four icons the manifest references
@@ -104,14 +107,46 @@ is fixed or changes shape.
 - **Business impact:** the /install page invites visitors to install the app. Chrome and Edge
   need a valid manifest to offer installation, so the prompt never appears on Android or
   desktop. iOS "Add to Home Screen" still works through the apple-specific meta tags.
-- **Proposed fix:** `git mv manifest.json public/manifest.json`. No service worker involved.
-  Current Chrome installability criteria do not require a service worker; to be confirmed on
-  the Vercel preview (Chrome DevTools > Application > Manifest shows installability errors).
-- **Regression test:** `known-defects.spec.ts` "D-3a still present as documented". Allowance:
-  a 404 for exactly `/manifest.json`, only while the file is absent from the build.
-- **Resolution criteria:** `/manifest.json` returns 200 with `application/manifest+json`
-  (or JSON) on the preview; DevTools reports no installability errors; the D-3a allowance
-  and characterization test are removed; a test asserts the manifest's icons all return 200.
+- **Fix (branch `fix/d3a-manifest`):** `git mv manifest.json public/manifest.json`. Content
+  unchanged. `service-worker.js` stays at the repo root, so it is still not deployed and the
+  registration in `src/root.jsx` still fails harmlessly (D-3b unchanged, as decided).
+- **Verification (2026-11-24, local production build):**
+  - `build/client/manifest.json` is byte-identical to the source.
+  - All 4 icons return 200 and their PNG headers match the declared sizes (192, 512, 1024,
+    maskable 512). The maskable icon's artwork fits Android's safe zone: the farthest corner of
+    the mark is about 194 px from center; the 80% circle is 205 px.
+  - Launch URL `/` and the 3 shortcut URLs (`/calculator`, `/prequal`, `/cash-to-close`)
+    return 200.
+  - Chromium's parsed manifest (DevTools protocol `Page.getAppManifest`), production vs fix:
+    production: 0 bytes, no name, no icons, display undefined. Fix: 1,751 bytes, "Mortgage
+    Geek", standalone, 4 icons, 3 shortcuts, theme color #CF3338. `/geek-log` still gets
+    `geeklog.webmanifest`.
+  - **Not a valid check:** `Page.getInstallabilityErrors` returned no errors on production
+    too, because current Chromium offers a basic "install page as app" for any site. It cannot
+    tell broken from fixed, so the tests do not use it.
+  - Fault injection: moving the file back to the repo root makes 43 tests fail (the 4
+    manifest tests and 39 WebKit page tests that now flag the 404 with no allowance).
+- **Verified on the Vercel preview (2026-11-24):** `/manifest.json` 200 with
+  `Content-Type: application/manifest+json; charset=utf-8` and `Cache-Control: public,
+  max-age=0, must-revalidate`; all 4 icons and `/geeklog.webmanifest` 200; Chromium parses
+  it as a standalone app (1,751 bytes, 4 icons, 3 shortcuts, no errors); `/service-worker.js`
+  still 404, and with service workers allowed the page registers none.
+- **Still to verify by hand, on real devices:** Chrome on Android offers "Install app" with
+  the Mortgage Geek name and icon; iOS "Add to Home Screen" opens standalone with the cream
+  apple-touch-icon.
+- **Browser behavior after the fix:** Chrome and Edge (desktop, Android) can install it as a
+  standalone app with its name, icon and 3 shortcuts (long-press the icon on Android). iOS
+  Safari ignores manifest icons and keeps using `apple-touch-icon`; it reads `display`.
+  Firefox desktop does not install web apps. No offline support (no service worker).
+- **Observation:** `background_color` is red (#CF3338) while the app icon is cream, so the
+  Android splash screen is a red field with a cream icon. Possibly intended; a design call.
+- **Regression tests:** `pwa-manifest.http.spec.ts` (served, valid, icons at declared sizes,
+  launch and shortcut URLs load, linked from all 38 public pages, Geek Log keeps its own) and
+  `pwa-manifest.spec.ts` (Chromium parses it as a standalone app). The D-3a allowance, its
+  harness test and its characterization test are removed; a `/manifest.json` 404 now fails
+  any browser test.
+- **Resolution criteria:** preview checks pass (done); device checks pass; merge after the
+  Playwright branch.
 
 ## D-3b: `/service-worker.js` is not deployed
 
@@ -220,10 +255,20 @@ Proposed strategy (for review, not implemented):
   standalone page.
 - **Business impact:** screen-reader users jump to the `<h1>` to find a page's main content;
   a small SEO signal.
-- **Regression test:** `smoke.spec.ts` asserts, for these two routes only, no `<h1>` and the
-  exact `<h2>` title.
-- **Resolution criteria:** each page has exactly one visible `<h1>` with the same text, no
-  visual change (screenshot comparison), entries removed from `ROUTES_WITHOUT_H1`.
+- **Fix (branch `fix/d4-page-headings`):** `SectionHeader` takes an optional `headingLevel`
+  (default 2). `JargonDecoder` and `PreApprovalChecklist` pass 1 when `standalone`, so the
+  standalone pages get an `<h1>` and the homepage sections stay `<h2>`.
+- **No visual change, verified:** every element's box and computed style recorded before and
+  after the fix on both pages, desktop Chromium and mobile WebKit. Computed styles identical;
+  boxes within 1 px; 40 of 40 comparisons identical. The method was calibrated first: 80 of 80
+  control runs without the change passed, and a deliberate 1 px margin change failed.
+  (Plain screenshot comparison was tried first and rejected: text anti-aliasing differs by up
+  to 1,715 pixels between identical loads, and font-load timing under D-2 shifts text by
+  1.5 px. A tolerance large enough to absorb that would hide real changes.)
+- **Regression test:** `smoke.spec.ts` "D-4 regression": both standalone pages have an `<h1>`
+  with their title; the homepage still has exactly one `<h1>` and these sections are not it.
+  The generic one-`<h1>` check in the smoke test now applies to all 38 routes.
+- **Resolution criteria:** met on the branch; closes when merged.
 
 ## T-1 (test defect): page HTML read from the browser's inspector cache
 
@@ -322,6 +367,9 @@ rules against their published source before writing expected values.
 - **O-1:** `src/pages/MainSite.jsx:20` and `src/pages/LearnPage.jsx:258` set `minHeight` twice
   in one style object; the second replaces the first, so the `100vh` fallback never applies
   (browsers without `dvh`, e.g. Safari before 15.4). The build warns on every run.
+- **O-3:** under D-2, `document.fonts.ready` can resolve before the Google Fonts `@import`
+  has registered any fonts, so text is measured in fallback fonts for a moment after load.
+  Any future visual test must wait for specific registered font faces (see the D-4 method).
 - **O-2:** the live `/api/rates` response on 2026-11-24 had `"change": null` for every rate and
   no 7/6 SOFR ARM entry, though the parser looks for both. Possibly a change on the source
   page. Not investigated.
