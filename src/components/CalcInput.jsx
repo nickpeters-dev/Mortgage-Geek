@@ -1,4 +1,4 @@
-import { useState, useEffect, useId } from "react";
+import { useState, useEffect, useId, useRef } from "react";
 import { P, F } from "../theme";
 
 // Colors default to the light calculator surface. Dark-surface consumers (the
@@ -21,7 +21,23 @@ export function CalcInput({ label, value, onChange, prefix, suffix, step = 1, mi
     if (!isNaN(v) && v >= min && v <= max) onChange(v);
   };
 
-  const handleFocus = () => {
+  // Focusing a comma field rewrites its text ("350,000" -> "350000"). Setting an
+  // input's value programmatically drops its selection, so after Tab (which
+  // selects the whole field) Chrome and Edge appended typed digits instead of
+  // replacing them (D-7). Remember a whole-field selection and restore it once
+  // the new text is in place. Clicking still places the caret where clicked.
+  const inputRef = useRef(null);
+  const reselectAll = useRef(false);
+  useEffect(() => {
+    if (focused && reselectAll.current) {
+      reselectAll.current = false;
+      inputRef.current?.select();
+    }
+  }, [focused, localVal]);
+
+  const handleFocus = (e) => {
+    const el = e.target;
+    reselectAll.current = el.value.length > 0 && el.selectionStart === 0 && el.selectionEnd === el.value.length;
     setFocused(true);
     setLocalVal(isEmpty ? "" : String(value));
   };
@@ -41,7 +57,7 @@ export function CalcInput({ label, value, onChange, prefix, suffix, step = 1, mi
       <label htmlFor={inputId} style={{ fontSize: 11, fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase", color: labelColor || P.warmGrayLight }}>{label}</label>
       <div style={{ display: "flex", alignItems: "center", border: `1px solid ${borderColor}`, borderRadius: 8, overflow: "hidden", background: bg }}>
         {prefix && <span style={{ padding: "9px 0 9px 12px", fontSize: 14, fontWeight: 600, color: affixColor }}>{prefix}</span>}
-        <input id={inputId} type={comma ? "text" : "number"} inputMode="decimal" value={localVal} onChange={handleChange} onFocus={handleFocus} onBlur={handleBlur} step={step}
+        <input ref={inputRef} id={inputId} type={comma ? "text" : "number"} inputMode="decimal" value={localVal} onChange={handleChange} onFocus={handleFocus} onBlur={handleBlur} step={step}
           style={{ flex: 1, border: "none", background: "transparent", padding: "9px 12px", fontSize: 15, fontFamily: F.body, fontWeight: 600, color: textColor, outline: "none", width: "100%" }} />
         {suffix && <span style={{ padding: "9px 12px 9px 0", fontSize: 14, fontWeight: 600, color: affixColor }}>{suffix}</span>}
       </div>

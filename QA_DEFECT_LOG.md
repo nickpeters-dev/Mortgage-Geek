@@ -27,7 +27,7 @@ is fixed or changes shape.
 | T-1 | Test defect: page HTML read from the browser inspector cache (flaky on WebKit in CI) | Medium (test) | Fixed | Found by the flaky gate on its first CI run |
 | D-5 | FHA annual MIP ignores loan term: 15-year loans charged the 30-year rate | Medium | Open | Found in Phase 2 rule review. Not fixed; awaiting decision |
 | D-6 | FHA annual MIP ignores loan size: base loans over $726,200 charged the standard rate | High | Open | Found in Phase 2 rule review. Not fixed; awaiting decision |
-| D-7 | Keyboard entry in comma-formatted fields appends instead of replacing (Chrome, Edge) | Medium | Open | Found in Phase 2. Not fixed; awaiting decision |
+| D-7 | Keyboard entry in comma-formatted fields appends instead of replacing (Chrome, Edge) | Medium | Fixed on `fix/d7-keyboard-entry` (pending merge) | 2026-11-25: approved |
 
 ---
 
@@ -316,6 +316,14 @@ rules against their published source before writing expected values.
   calculation tests are not blocked by D-7.
 - **Resolution criteria:** the Tab-and-type path gives $400,000 in Chromium and WebKit; the
   characterization test is rewritten to assert that for both.
+- **Fix (branch `fix/d7-keyboard-entry`, 2026-11-25):** `CalcInput` records on focus whether
+  the browser had selected the whole field and, if so, selects it again after the text is
+  rewritten (`useEffect`, which React 18 flushes synchronously for focus events; no SSR
+  warning). Clicking still places the caret. Shared by the calculator, PreQual, Cash to Close
+  and Rent vs Own.
+- **Verification:** regression tests in `calculator.inputs.spec.ts` (Tab into Home Price and
+  into Down Payment $, both browsers; caret editing unchanged). Without the fix both Chromium
+  tests fail with $99,999,999.
 
 ## Observations (not defects)
 
