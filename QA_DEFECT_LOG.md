@@ -27,6 +27,7 @@ is fixed or changes shape.
 | T-1 | Test defect: page HTML read from the browser inspector cache (flaky on WebKit in CI) | Medium (test) | Fixed | Found by the flaky gate on its first CI run |
 | D-5 | FHA annual MIP ignores loan term: 15-year loans charged the 30-year rate | Medium | Open | Found in Phase 2 rule review. Not fixed; awaiting decision |
 | D-6 | FHA annual MIP ignores loan size: base loans over $726,200 charged the standard rate | High | Open | Found in Phase 2 rule review. Not fixed; awaiting decision |
+| D-7 | Keyboard entry in comma-formatted fields appends instead of replacing (Chrome, Edge) | Medium | Open | Found in Phase 2. Not fixed; awaiting decision |
 
 ---
 
@@ -290,6 +291,32 @@ rules against their published source before writing expected values.
   above at every band edge (90.00%, 95.00%, 78.00%, $726,200 and $726,201); card labels show
   the right rate; unit and browser tests assert the HUD values.
 
+## D-7: Keyboard entry in comma-formatted fields appends instead of replacing (Chrome, Edge)
+
+- **Severity:** Medium. **Found:** 2026-11-25, when Playwright's `fill()` put $99,999,999 in
+  Home Price.
+- **Reproduction (Chrome or Edge, desktop):** on `/calculator`, press Tab until Home Price is
+  focused, type `400000`, press Tab.
+- **Expected:** Home Price $400,000 (Tab selects the field's text; typing replaces it).
+- **Actual:** $99,999,999. On focus, `CalcInput` switches the display from "350,000" to
+  "350000". Setting the value programmatically clears the selection and puts the caret at the
+  end, so the typed digits are appended ("350000400000"), and the value is clamped to the
+  field's maximum on blur.
+- **Not affected:** WebKit (Safari, iPhone) keeps the selection; clicking then selecting all,
+  or triple-clicking, works in every browser; fields without thousands separators (the text
+  does not change on focus).
+- **Root cause:** `handleFocus` in `src/components/CalcInput.jsx` calls
+  `setLocalVal(String(value))` for comma fields. Likely fix: select the text again after the
+  re-render (`e.target.select()` in a layout effect), or stop reformatting on focus.
+- **Business impact:** keyboard users and anyone who tabs through the form get an absurd price
+  and every card recalculates on it. Obvious, so not a silent wrong number, but it breaks the
+  calculator for keyboard users (WCAG 2.1.1) and reads as a broken site.
+- **Regression test:** `calculator.inputs.spec.ts` "D-7 characterization" (Chromium asserts
+  the defect, WebKit asserts correct behavior). The page object types like a mouse user so the
+  calculation tests are not blocked by D-7.
+- **Resolution criteria:** the Tab-and-type path gives $400,000 in Chromium and WebKit; the
+  characterization test is rewritten to assert that for both.
+
 ## Observations (not defects)
 
 - **O-1:** `src/pages/MainSite.jsx:20` and `src/pages/LearnPage.jsx:258` set `minHeight` twice
@@ -298,3 +325,10 @@ rules against their published source before writing expected values.
 - **O-2:** the live `/api/rates` response on 2026-11-24 had `"change": null` for every rate and
   no 7/6 SOFR ARM entry, though the parser looks for both. Possibly a change on the source
   page. Not investigated.
+- **O-4:** on the mobile layout, an eligible program card is a clickable `<div>` (select to
+  show its pie chart) with no button role or keyboard handler; the desktop card is a proper
+  `role="button"`. Touch users are unaffected; a keyboard or switch user on a narrow window
+  cannot select a card. Found during the Phase 2 locator work (2026-11-25).
+- **O-5:** VA cards show "Over Loan Limit" above the county limit. VA has not applied county
+  loan limits to veterans with full entitlement since 2020 (Blue Water Navy Act). Not yet
+  verified against a VA source; to confirm before logging as a defect.
