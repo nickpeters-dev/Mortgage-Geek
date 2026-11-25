@@ -216,6 +216,38 @@ describe(`FHA rules (${SOURCES.fha})`, () => {
     assert.equal(fhaMiRate(10), 0.5);
   });
 
+  // HUD Mortgagee Letter 2023-05, Appendix 1.0. Every row of the table, tested
+  // at its band edges (D-5: term was ignored; D-6: loan size was ignored).
+  // Expected values are typed from the published table, not from the code.
+  describe("annual premium by term and base loan (HUD ML 2023-05)", () => {
+    const rate = (downPct, term, baseLoan) => fhaMiRate(downPct, { term, baseLoan });
+    test("over 15 years, base loan at or under $726,200: 0.55 / 0.50", () => {
+      assert.equal(rate(4.99, 30, 726200), 0.55);
+      assert.equal(rate(5, 30, 726200), 0.5);
+    });
+    test("over 15 years, base loan over $726,200: 0.75 / 0.70", () => {
+      assert.equal(rate(4.99, 30, 726201), 0.75);
+      assert.equal(rate(5, 30, 726201), 0.7);
+      assert.equal(rate(10, 30, 810000), 0.7);
+    });
+    test("15 years, base loan at or under $726,200: 0.40 above 90% LTV, 0.15 at or below", () => {
+      assert.equal(rate(3.5, 15, 337750), 0.4);
+      assert.equal(rate(9.99, 15, 726200), 0.4);
+      assert.equal(rate(10, 15, 726200), 0.15); // exactly 90.00% LTV is "<= 90.00%"
+    });
+    test("15 years, base loan over $726,200: 0.65 / 0.40 / 0.15 at 90% and 78% LTV", () => {
+      assert.equal(rate(9.99, 15, 726201), 0.65);
+      assert.equal(rate(10, 15, 726201), 0.4);
+      assert.equal(rate(21.99, 15, 726201), 0.4);
+      assert.equal(rate(22, 15, 726201), 0.15); // exactly 78.00% LTV
+    });
+    test("resolveProgram passes the term and base loan through", () => {
+      assert.equal(resolveProgram({ program: "FHA", price: 400000, downPct: 10, term: 15 }).miRate, 0.15);
+      assert.equal(resolveProgram({ program: "FHA", price: 900000, downPct: 10 }).miRate, 0.7);
+      assert.equal(resolveProgram({ program: "FHA", price: 350000, downPct: 3.5 }).miRate, 0.55);
+    });
+  });
+
   test("minimum down payment is 3.5%", () => {
     assert.equal(resolveProgram({ program: "FHA", price: 350000, downPct: 3.49 }).eligible, false);
     assert.equal(resolveProgram({ program: "FHA", price: 350000, downPct: 3.5 }).eligible, true);

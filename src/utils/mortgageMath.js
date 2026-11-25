@@ -26,8 +26,28 @@ export function conventionalMiRate(downPct) {
   return 0.52;
 }
 
-// FHA annual MIP.
-export function fhaMiRate(downPct) {
+// FHA annual MIP, HUD Mortgagee Letter 2023-05, Appendix 1.0 (case numbers
+// endorsed on or after 2023-03-20). The rate depends on the term, the base loan
+// amount and the LTV; LTV bands are expressed as down payment (LTV <= 90% is
+// 10%+ down, <= 95% is 5%+ down, <= 78% is 22%+ down), matching how the tools
+// already tier by down payment.
+//
+//   term > 15 years   base <= $726,200: 0.55 (LTV > 95%), else 0.50
+//                     base >  $726,200: 0.75 (LTV > 95%), else 0.70
+//   term <= 15 years  base <= $726,200: 0.40 (LTV > 90%), else 0.15
+//                     base >  $726,200: 0.65 (LTV > 90%), 0.40 (78-90%), 0.15 (<= 78%)
+//
+// Called with only a down payment, it returns the 30-year standard-size rate.
+export const FHA_HIGH_BALANCE_THRESHOLD = 726200;
+
+export function fhaMiRate(downPct, { term = 30, baseLoan = 0 } = {}) {
+  const highBalance = baseLoan > FHA_HIGH_BALANCE_THRESHOLD;
+  if (term <= 15) {
+    if (!highBalance) return downPct >= 10 ? 0.15 : 0.4;
+    if (downPct >= 22) return 0.15;
+    return downPct >= 10 ? 0.4 : 0.65;
+  }
+  if (highBalance) return downPct < 5 ? 0.75 : 0.7;
   return downPct < 5 ? 0.55 : 0.5;
 }
 
@@ -60,19 +80,20 @@ export function monthlyMI(baseLoan, miRate) {
 //              wins when passed, matching its dollar-entry field).
 //   loan     = baseLoan plus any financed upfront fee (FHA UFMIP, VA funding
 //              fee, USDA guarantee fee); this is what the payment amortizes on.
-//   miRate   = annual mortgage insurance rate, charged on baseLoan.
+//   miRate   = annual mortgage insurance rate, charged on baseLoan. FHA's
+//              depends on the term (default 30) and the base loan size.
 //
 // Down payment tiers and eligibility use the percentage, matching the
 // calculator. Presentation the tools do not share (card notes, ineligibility
 // wording, loan limits, the Rent vs Own MI drop-off schedule) is left to each
 // tool; this returns the numbers and the labels both already rendered the same.
-export function resolveProgram({ program, price, downPct, downAmt = null, vaUsage = "first" }) {
+export function resolveProgram({ program, price, downPct, downAmt = null, vaUsage = "first", term = 30 }) {
   const down = downAmt !== null ? downAmt : (price * downPct) / 100;
   const baseLoan = price - down;
 
   switch (program) {
     case "FHA": {
-      const rate = fhaMiRate(downPct);
+      const rate = fhaMiRate(downPct, { term, baseLoan });
       const upfront = baseLoan * 0.0175;
       return {
         program, down, baseLoan, upfront, loan: baseLoan + upfront,

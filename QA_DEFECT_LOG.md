@@ -25,8 +25,9 @@ is fixed or changes shape.
 | D-1 | Prerendering inserts NUL bytes before some multi-byte characters | Low | Deferred | No workaround. Fix with the React 19 upgrade; a React-only test verifies the upgrade |
 | D-4 | Two public pages have no `<h1>` | Low | Fixed (2026-11-25) | Approved: small isolated fix, no visual change |
 | T-1 | Test defect: page HTML read from the browser inspector cache (flaky on WebKit in CI) | Medium (test) | Fixed | Found by the flaky gate on its first CI run |
-| D-5 | FHA annual MIP ignores loan term: 15-year loans charged the 30-year rate | Medium | Open | Found in Phase 2 rule review. Not fixed; awaiting decision |
-| D-6 | FHA annual MIP ignores loan size: base loans over $726,200 charged the standard rate | High | Open | Found in Phase 2 rule review. Not fixed; awaiting decision |
+| D-5 | FHA annual MIP ignores loan term: 15-year loans charged the 30-year rate | Medium | Fixed on `fix/fha-mip` (pending merge) | 2026-11-25: approved; fixed with D-6 |
+| D-6 | FHA annual MIP ignores loan size: base loans over $726,200 charged the standard rate | High | Fixed on `fix/fha-mip` (pending merge) | 2026-11-25: approved; fixed in the calculator, Rent vs Own and PreQual |
+| D-8 | PreQual's default location resets to the first county in the list (Anderson County), not Nashville/Davidson | Medium | Open | Found while fixing D-6 |
 | D-7 | Keyboard entry in comma-formatted fields appends instead of replacing (Chrome, Edge) | Medium | Open | Found in Phase 2. Not fixed; awaiting decision |
 | R-6 | PreQual USDA rate never live; must equal FHA (owner's rule) | High | Open, fix needed | 2026-11-25: USDA always matches FHA on every page. Backlog |
 | R-1 | Rate API failure shows hardcoded rates credited to Mortgage News Daily | Medium | Open, fix needed | 2026-11-25: fall back to the last good (e.g. yesterday's) rate, dated. Backlog |
@@ -335,6 +336,24 @@ rules against their published source before writing expected values.
 - **Resolution criteria:** `fhaMiRate` takes term, base loan and LTV; values match the table
   above at every band edge (90.00%, 95.00%, 78.00%, $726,200 and $726,201); card labels show
   the right rate; unit and browser tests assert the HUD values.
+- **Fix (branch `fix/fha-mip`, 2026-11-25):**
+  - `fhaMiRate(downPct, { term, baseLoan })` in `src/utils/mortgageMath.js` implements the
+    whole table; `resolveProgram` and `computeMonthlyPayment` pass the term through. The
+    threshold is one named constant, `FHA_HIGH_BALANCE_THRESHOLD`. **Owner to confirm** that
+    $726,200 is still current: ML 2023-05 ties it to the national conforming loan limit, but
+    prints a fixed amount.
+  - **PreQual had its own copy of the old rule** (`PreQualPage.jsx`), now replaced by the
+    shared function. Because PreQual solves for the loan, the rate depends on its own answer:
+    it solves at the standard rate, then the high-balance rate, and when neither answer is on
+    its own side of the threshold the maximum is pinned at the threshold (base loan $726,199
+    at 10% down). Each result reports the MIP rate of its own final loan.
+  - Rent vs Own uses the shared function (30-year), so D-6 is fixed there too.
+- **Verification:** unit tests for every row of the HUD table at each band edge; calculator
+  browser tests at base $726,200 vs $726,201.60 (a $121/mo step), 15 years at 9.99/10% and
+  21.99/22% down; `prequal.fha-mip.spec.ts` covers the three PreQual cases plus an
+  invariant (the reported maximum must be affordable at its own MIP rate). Mutations: ignoring
+  loan size fails 3 calculator tests; solving PreQual at a single rate fails 2 PreQual tests
+  (the invariant shows a $6,141 payment against a $6,019 maximum).
 
 ## D-7: Keyboard entry in comma-formatted fields appends instead of replacing (Chrome, Edge)
 
@@ -362,6 +381,22 @@ rules against their published source before writing expected values.
 - **Resolution criteria:** the Tab-and-type path gives $400,000 in Chromium and WebKit; the
   characterization test is rewritten to assert that for both.
 
+## D-8: PreQual's default location resets to the first county in the list
+
+- **Severity:** Medium. **Found:** 2026-11-25, while writing the D-6 PreQual test.
+- **Reproduction:** open `/prequal` and look at the tax area: it shows "Anderson County
+  (0.7%)".
+- **Expected:** Nashville/Davidson, the default in the code (`useState("Nashville/Davidson")`)
+  and the calculator's default.
+- **Actual:** a mount effect on `taxState` resets the metro to the state's first entry, so
+  every visitor starts in Anderson County: a 0.70% tax rate instead of 0.95%, and baseline loan
+  limits (FHA $541,287) instead of Nashville's $1,029,250. The calculator and PreQual give
+  different answers for the same visitor.
+- **Business impact:** PreQual's starting buying power uses a different county from the
+  calculator, and caps FHA at the baseline limit for a Nashville buyer.
+- **Resolution criteria:** PreQual starts on Nashville/Davidson (or the owner's chosen
+  default) and only resets the metro when the visitor changes the state.
+
 ## Observations (not defects)
 
 - **O-1:** `src/pages/MainSite.jsx:20` and `src/pages/LearnPage.jsx:258` set `minHeight` twice
@@ -380,3 +415,6 @@ rules against their published source before writing expected values.
 - **O-5:** VA cards show "Over Loan Limit" above the county limit. VA has not applied county
   loan limits to veterans with full entitlement since 2020 (Blue Water Navy Act). Not yet
   verified against a VA source; to confirm before logging as a defect.
+- **O-6:** on the mobile layout, PreQual's program results are plain text blocks with no
+  heading, button or region, so they cannot be reached by role or name (desktop has a
+  "Loan results" region with named buttons). For the PreQual review.
