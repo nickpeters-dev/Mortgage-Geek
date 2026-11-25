@@ -19,11 +19,11 @@ is fixed or changes shape.
 
 | ID | Title | Severity | Status | Decision (2026-11-24) |
 |---|---|---|---|---|
-| D-2 | Prerendered `<style>` content is HTML-escaped; hydration fails on every page | Medium (was High) | Open | Approved: investigate and plan on a dedicated branch, with before/after measurement |
-| D-3a | `/manifest.json` is not deployed | Medium | Fixed on `fix/d3a-manifest` (pending merge) | Approved: separate branch; service worker stays off |
+| D-2 | Prerendered `<style>` content is HTML-escaped; hydration fails on every page | Medium (was High) | Open, fix planned | Remediation branch scheduled after Phase 2 (sooner if it interferes with calculator testing). Priority raised within Medium: it masks every other hydration error |
+| D-3a | `/manifest.json` is not deployed | Medium | Fixed (2026-11-25) | Approved: separate branch; service worker stays off |
 | D-3b | `/service-worker.js` is not deployed | Low | Open | Do not enable until the caching strategy is reviewed |
-| D-1 | Prerendering inserts NUL bytes before some multi-byte characters | Low | Open, root cause found | Fix options listed, awaiting decision |
-| D-4 | Two public pages have no `<h1>` | Low | Fix in progress | Approved: small isolated fix, no visual change |
+| D-1 | Prerendering inserts NUL bytes before some multi-byte characters | Low | Deferred | No workaround. Fix with the React 19 upgrade; a React-only test verifies the upgrade |
+| D-4 | Two public pages have no `<h1>` | Low | Fixed (2026-11-25) | Approved: small isolated fix, no visual change |
 | T-1 | Test defect: page HTML read from the browser inspector cache (flaky on WebKit in CI) | Medium (test) | Fixed | Found by the flaky gate on its first CI run |
 
 ---
@@ -219,12 +219,25 @@ Proposed strategy (for review, not implemented):
   reading raw HTML may treat the page as binary; SEO auditors may flag it. Which pages are
   affected depends on where multi-byte characters fall in the byte stream, so any content
   edit can move it to another page.
-- **Fix options:** (a) a custom `src/entry.server.jsx` that strips 0x00 from the prerender
-  stream (valid HTML never contains it); (b) upgrade to React 19 (not verified to fix it).
-  18.3.1 is the final React 18 release.
-- **Regression test:** `production-routing.http.spec.ts`: every public route must have exactly
-  its documented NUL count (2 routes listed, all others 0).
-- **Resolution criteria:** 0 NUL bytes on all 38 routes; `KNOWN_NUL_BYTES` emptied.
+- **Decision (2026-11-24): deferred to the React 19 upgrade.** No custom `entry.server`
+  workaround for a low-impact dependency defect. 18.3.1 is the final React 18 release, so no
+  18.x patch will fix it. Not yet verified that React 19 fixes it.
+- **Verifying the upgrade:** `known-defects.http.spec.ts` renders a bare React element (no
+  site code) through `renderToPipeableStream` and asserts the exact 18.3.1 result: one input
+  (2047 padding elements) produces 2 NUL bytes. Sensitivity checked: applying the one-line
+  fix (`currentView.subarray(0, writtenBytes)`) to the installed React made the test fail;
+  restoring React made it pass. On the upgrade branch:
+  - Test still passes: React 19 did not fix it. Reopen the decision (workaround or wait).
+  - Test fails: confirm 0 NUL bytes on all 38 routes (the routing spec will also fail, since
+    its documented counts no longer match), then empty `KNOWN_NUL_BYTES`, delete the test and
+    close D-1.
+- **Regression tests:** `production-routing.http.spec.ts`: every public route must have exactly
+  its documented NUL count (2 routes listed, all others 0). Content edits can move the NUL
+  bytes to other pages; when that test fails after a content-only change, update
+  `KNOWN_NUL_BYTES` from the new build and note it here (the React-only test is the one
+  that tracks the cause). Plus `known-defects.http.spec.ts` above.
+- **Resolution criteria:** 0 NUL bytes on all 38 routes; `KNOWN_NUL_BYTES` emptied; the
+  React-only characterization test removed.
 
 ## D-4: Two public pages have no `<h1>`
 
@@ -236,10 +249,20 @@ Proposed strategy (for review, not implemented):
   standalone page.
 - **Business impact:** screen-reader users jump to the `<h1>` to find a page's main content;
   a small SEO signal.
-- **Regression test:** `smoke.spec.ts` asserts, for these two routes only, no `<h1>` and the
-  exact `<h2>` title.
-- **Resolution criteria:** each page has exactly one visible `<h1>` with the same text, no
-  visual change (screenshot comparison), entries removed from `ROUTES_WITHOUT_H1`.
+- **Fix (branch `fix/d4-page-headings`):** `SectionHeader` takes an optional `headingLevel`
+  (default 2). `JargonDecoder` and `PreApprovalChecklist` pass 1 when `standalone`, so the
+  standalone pages get an `<h1>` and the homepage sections stay `<h2>`.
+- **No visual change, verified:** every element's box and computed style recorded before and
+  after the fix on both pages, desktop Chromium and mobile WebKit. Computed styles identical;
+  boxes within 1 px; 40 of 40 comparisons identical. The method was calibrated first: 80 of 80
+  control runs without the change passed, and a deliberate 1 px margin change failed.
+  (Plain screenshot comparison was tried first and rejected: text anti-aliasing differs by up
+  to 1,715 pixels between identical loads, and font-load timing under D-2 shifts text by
+  1.5 px. A tolerance large enough to absorb that would hide real changes.)
+- **Regression test:** `smoke.spec.ts` "D-4 regression": both standalone pages have an `<h1>`
+  with their title; the homepage still has exactly one `<h1>` and these sections are not it.
+  The generic one-`<h1>` check in the smoke test now applies to all 38 routes.
+- **Resolution criteria:** met on the branch; closes when merged.
 
 ## T-1 (test defect): page HTML read from the browser's inspector cache
 
@@ -268,6 +291,9 @@ Proposed strategy (for review, not implemented):
 - **O-1:** `src/pages/MainSite.jsx:20` and `src/pages/LearnPage.jsx:258` set `minHeight` twice
   in one style object; the second replaces the first, so the `100vh` fallback never applies
   (browsers without `dvh`, e.g. Safari before 15.4). The build warns on every run.
+- **O-3:** under D-2, `document.fonts.ready` can resolve before the Google Fonts `@import`
+  has registered any fonts, so text is measured in fallback fonts for a moment after load.
+  Any future visual test must wait for specific registered font faces (see the D-4 method).
 - **O-2:** the live `/api/rates` response on 2026-11-24 had `"change": null` for every rate and
   no 7/6 SOFR ARM entry, though the parser looks for both. Possibly a change on the source
   page. Not investigated.
