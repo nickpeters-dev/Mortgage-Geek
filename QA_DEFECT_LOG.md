@@ -25,6 +25,8 @@ is fixed or changes shape.
 | D-1 | Prerendering inserts NUL bytes before some multi-byte characters | Low | Deferred | No workaround. Fix with the React 19 upgrade; a React-only test verifies the upgrade |
 | D-4 | Two public pages have no `<h1>` | Low | Fix in progress | Approved: small isolated fix, no visual change |
 | T-1 | Test defect: page HTML read from the browser inspector cache (flaky on WebKit in CI) | Medium (test) | Fixed | Found by the flaky gate on its first CI run |
+| D-5 | FHA annual MIP ignores loan term: 15-year loans charged the 30-year rate | Medium | Open | Found in Phase 2 rule review. Not fixed; awaiting decision |
+| D-6 | FHA annual MIP ignores loan size: base loans over $726,200 charged the standard rate | High | Open | Found in Phase 2 rule review. Not fixed; awaiting decision |
 
 ---
 
@@ -243,6 +245,50 @@ Proposed strategy (for review, not implemented):
 - **Verification:** removing the mechanism, not narrowing the timing; 440-run WebKit burn-in
   (smoke + D-2 tests x10) with zero failures; CI rerun on the branch.
 - **Regression test:** the suite itself; CI with `failOnFlakyTests` reports any recurrence.
+
+## D-5 and D-6: FHA annual MIP ignores the loan term and the loan size
+
+Found 2026-11-25 while building the Phase 2 reference calculations, by checking the program
+rules against their published source before writing expected values.
+
+- **Source:** HUD Mortgagee Letter 2023-05 (effective for case numbers endorsed on or after
+  March 20, 2023), Appendix 1.0, read from hud.gov
+  (`https://www.hud.gov/sites/dfiles/OCHCO/documents/2023-05hsgml.pdf`):
+
+  | Term | Base loan | LTV | Annual MIP | Duration |
+  |---|---|---|---|---|
+  | > 15 years | ≤ $726,200 | ≤ 90% / 90-95% / > 95% | 0.50 / 0.50 / 0.55% | 11 years / term / term |
+  | > 15 years | > $726,200 | ≤ 90% / 90-95% / > 95% | 0.70 / 0.70 / 0.75% | 11 years / term / term |
+  | ≤ 15 years | ≤ $726,200 | ≤ 90% / > 90% | 0.15 / 0.40% | 11 years / term |
+  | ≤ 15 years | > $726,200 | ≤ 78% / 78-90% / > 90% | 0.15 / 0.40 / 0.65% | 11 / 11 / term |
+
+  The letter ties the $726,200 threshold to the national conforming loan limit. Whether HUD
+  has since moved the threshold with the annual conforming limit was not verified; check the
+  current Handbook 4000.1 Appendix 1.0 before fixing.
+- **Actual:** `fhaMiRate(downPct)` in `src/utils/mortgageMath.js` takes only the down
+  payment: 0.55% under 5% down, else 0.50%. It never receives the term or the base loan. The
+  30-year, standard-size rows match HUD; the other rows do not.
+- **D-5, 15-year term (Medium, overstates the payment):** $350,000 at 3.5% down: app MIP
+  $154.80/mo, HUD $112.58, **$42.22 too high**. At 10% down: app $131.25, HUD $39.38, **$91.88
+  too high**. The calculator makes 15-year FHA look worse than it is next to conventional.
+- **D-6, base loan over $726,200 (High, understates the payment):** reachable in the app:
+  its FHA limits go up to $1,149,825 (Nashville MSA $1,029,250). $800,000 at 3.5% down: app
+  $353.83/mo, HUD $482.50, **$128.67 too low**. $900,000 at 10% down: app $337.50, HUD $472.50,
+  **$135.00 too low**. A wrong financial figure a borrower could act on, which the scale calls
+  Critical; rated High because it reaches only high-balance FHA buyers in high-cost counties.
+  Owner to confirm the severity.
+- **Why the unit tests passed:** they test `fhaMiRate(3.5) === 0.55` and similar, exactly the
+  rule the code implements. The function's inputs cannot express term or loan size, so no
+  test of it could catch this. Expected values derived from the source table, not from the
+  function's shape, are what found it.
+- **Also affects:** Rent vs Own uses the same `resolveProgram` (30-year only, so D-5 does not
+  apply there; D-6 does for high prices). PreQual has its own FHA logic (to be reviewed).
+- **Regression tests (Phase 2):** characterization tests assert today's values with the HUD
+  value in the test as the documented correct answer; they fail when the defect is fixed, and
+  are then switched to assert the HUD value.
+- **Resolution criteria:** `fhaMiRate` takes term, base loan and LTV; values match the table
+  above at every band edge (90.00%, 95.00%, 78.00%, $726,200 and $726,201); card labels show
+  the right rate; unit and browser tests assert the HUD values.
 
 ## Observations (not defects)
 
