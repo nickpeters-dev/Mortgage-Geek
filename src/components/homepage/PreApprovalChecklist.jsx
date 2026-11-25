@@ -64,7 +64,7 @@ export function PreApprovalChecklist({ standalone = false }) {
   return (
     <section id="checklist" style={{ padding: "64px 40px" }}>
       <div onClick={standalone ? undefined : () => setSectionOpen(!sectionOpen)} style={{ cursor: standalone ? "default" : "pointer" }}>
-        <SectionHeader eyebrow="Get Organized" title={standalone ? "Pre-Approval Checklist" : `Pre-Approval Checklist ${sectionOpen ? "−" : "+"}`} subtitle={sectionOpen ? "Gathering these documents before you apply will speed up your approval and reduce back-and-forth. Check them off as you go." : (checkedCount > 0 ? `Click to expand — you've checked off ${checkedCount} of ${totalItems} items.` : `Click to reveal ${totalItems} documents to gather before you apply.`)} />
+        <SectionHeader headingLevel={standalone ? 1 : 2} eyebrow="Get Organized" title={standalone ? "Pre-Approval Checklist" : `Pre-Approval Checklist ${sectionOpen ? "−" : "+"}`} subtitle={sectionOpen ? "Gathering these documents before you apply will speed up your approval and reduce back-and-forth. Check them off as you go." : (checkedCount > 0 ? `Click to expand — you've checked off ${checkedCount} of ${totalItems} items.` : `Click to reveal ${totalItems} documents to gather before you apply.`)} />
       </div>
       {sectionOpen && (
       <div style={{ maxWidth: 720 }}>

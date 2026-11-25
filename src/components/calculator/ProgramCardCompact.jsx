@@ -11,7 +11,7 @@
 // Engineering standards: named export only, P/F/PROGRAM_COLORS from theme,
 // no hardcoded hex, inline styles.
 
-import React from 'react';
+import React, { useId } from 'react';
 import { P, F } from '../../theme';
 import { fmt } from '../../utils/format';
 
@@ -36,6 +36,12 @@ export function ProgramCardCompact({
   homePrice,
   baseLoan,
 }) {
+  // Accessible name = the program name; description = total and rate. Lets
+  // assistive tech (and tests) find "the FHA card" without relying on layout.
+  const uid = useId();
+  const nameId = `${uid}-name`;
+  const totalId = `${uid}-total`;
+  const rateId = `${uid}-rate`;
   // Ineligible — gray header + reason title + truncated body. The live
   // page renders the full reason body; we keep the same words but cap the
   // visible portion to two lines so the card height stays in rhythm with
@@ -46,11 +52,13 @@ export function ProgramCardCompact({
     return (
       <article
         className="content-card calc-compact-card"
+        role="group"
+        aria-labelledby={nameId}
         style={ineligibleStyle}
         title={reason ? `${reason.title} — ${reason.body}` : 'Ineligible'}
       >
         <div style={ineligibleHeaderStyle}>
-          <span style={programLabelStyle}>{prog.name}</span>
+          <span id={nameId} style={programLabelStyle}>{prog.name}</span>
           <span style={ineligibleTitleStyle}>Ineligible</span>
         </div>
         <div style={compactBodyStyle}>
@@ -77,10 +85,12 @@ export function ProgramCardCompact({
     return (
       <article
         className="content-card calc-compact-card"
+        role="group"
+        aria-labelledby={nameId}
         style={ineligibleStyle}
       >
         <div style={ineligibleHeaderStyle}>
-          <span style={programLabelStyle}>{prog.name}</span>
+          <span id={nameId} style={programLabelStyle}>{prog.name}</span>
           <span style={ineligibleTitleStyle}>Over Loan Limit</span>
         </div>
         <div style={compactBodyStyle}>
@@ -119,6 +129,8 @@ export function ProgramCardCompact({
         }
       }}
       aria-pressed={isSelected}
+      aria-labelledby={nameId}
+      aria-describedby={`${totalId} ${rateId}`}
       style={{
         ...eligibleStyle,
         border: isSelected ? `3px solid ${P.gold}` : `3px solid transparent`,
@@ -141,9 +153,9 @@ export function ProgramCardCompact({
         }}
       >
         {isBest && <span style={lowestBadgeStyle(prog.color)}>★ Lowest</span>}
-        <span style={headerProgramNameStyle}>{prog.name}</span>
-        <span style={headerTotalStyle}>{fmt(prog.total)}</span>
-        <span style={headerRateStyle}>
+        <span id={nameId} style={headerProgramNameStyle}>{prog.name}</span>
+        <span id={totalId} data-testid="monthly-total" style={headerTotalStyle}>{fmt(prog.total)}</span>
+        <span id={rateId} style={headerRateStyle}>
           /mo · {Number(prog.rate).toFixed(3)}%
         </span>
         {/* Payment mode: this program's own solved price for the target payment,

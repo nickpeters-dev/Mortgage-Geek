@@ -5,6 +5,7 @@ import { ContactCard } from "../components/homepage/ContactCard";
 import { SHARED_STATE_TAX_RATES, DEFAULT_LIMITS } from "../data/taxRates";
 import { fmt, pctCap, withAlpha } from "../utils/format";
 import { calculateAPR } from "../utils/math";
+import { fhaMiRate as fhaAnnualMipRate, FHA_HIGH_BALANCE_THRESHOLD } from "../utils/mortgageMath";
 import { useIsCockpit } from "../utils/hooks";
 import { MortgageCalcIcon, PreQualIcon } from "../components/icons";
 import { ToolLockup } from "../components/ToolLockup";
@@ -150,7 +151,11 @@ export function PreQualPage() {
   // Program definitions — use effectiveDownPct for MI tiers and eligibility
   const dpForCalc = isDollarMode ? effectiveDownPct : downPct;
   const convMiRate = dpForCalc < 5 ? 0.52 : dpForCalc < 10 ? 0.37 : dpForCalc < 20 ? 0.27 : 0;
-  const fhaMiRate = dpForCalc < 5 ? 0.55 : 0.50;
+  // FHA annual MIP depends on the term and the base loan size (HUD ML 2023-05),
+  // and the base loan is what this page solves for, so the rate is evaluated
+  // per loan amount (see solveTiered below). This is the rate at a standard-size loan.
+  const fhaMiRateAt = (baseLoan) => fhaAnnualMipRate(dpForCalc, { term, baseLoan });
+  const fhaMiRate = fhaMiRateAt(0);
 
   // Per-program ineligibility messaging. Each program populates ineligibleReason
   // with the {title, body} the result card renders when eligible === false.
@@ -190,7 +195,7 @@ export function PreQualPage() {
     },
     {
       name: "FHA", color: PROGRAM_COLORS.FHA, rate: fhaRate, setRate: setFhaRate,
-      frontMax: 0.4699, backMax: 0.5699, miRate: fhaMiRate, upfrontFee: 1.75,
+      frontMax: 0.4699, backMax: 0.5699, miRate: fhaMiRate, miRateAt: fhaMiRateAt, upfrontFee: 1.75,
       minDown: 3.5, eligible: dpForCalc >= 3.5, loanLimit: loanLimits.fha,
       miLabel: `MIP (${fhaMiRate}%)`,
       notes: "Front-end 46.99%, back-end 56.99%. DTI thresholds assume 680+ FICO. UFMIP (1.75%) financed. MIP for life if <10% down.",
@@ -238,8 +243,26 @@ export function PreQualPage() {
     const comfBack = Math.floor(grossIncome * prog.backMax * 0.75) - monthlyDebts;
     const comfPayment = Math.max(0, Math.min(comfFront, comfBack));
 
-    let maxPrice = solvePrice(maxPayment, prog.rate, prog.miRate, prog.upfrontFee);
-    let comfPrice = solvePrice(comfPayment, prog.rate, prog.miRate, prog.upfrontFee);
+    // Base loan at a given price, the same way the loan amounts below compute it.
+    const baseLoanAt = (price) => (useFixedDown ? Math.max(price - downDollarOverride, 0) : price * (1 - dpForCalc / 100));
+    // Price whose base loan is exactly `loan` (inverse of baseLoanAt).
+    const priceForBaseLoan = (loan) => (useFixedDown ? loan + downDollarOverride : Math.floor(loan / (1 - dpForCalc / 100)));
+    // FHA's rate steps up above the high-balance threshold, so the payment jumps
+    // there. Solve piecewise: standard rate if that answer stays at or under the
+    // threshold; else the high-balance rate if that answer is above it; else the
+    // maximum sits exactly at the threshold. Re-solving in a loop could flip-flop
+    // across the boundary; this cannot.
+    const solveTiered = (payment) => {
+      if (!prog.miRateAt) return solvePrice(payment, prog.rate, prog.miRate, prog.upfrontFee);
+      const T = FHA_HIGH_BALANCE_THRESHOLD;
+      const standard = solvePrice(payment, prog.rate, prog.miRateAt(T), prog.upfrontFee);
+      if (baseLoanAt(standard) <= T) return standard;
+      const high = solvePrice(payment, prog.rate, prog.miRateAt(T + 1), prog.upfrontFee);
+      if (baseLoanAt(high) > T) return high;
+      return priceForBaseLoan(T);
+    };
+    let maxPrice = solveTiered(maxPayment);
+    let comfPrice = solveTiered(comfPayment);
 
     // When using fixed dollar down, cap price so down payment meets minimum %
     // e.g., $10,000 at 3% min → max price = $333,333
@@ -258,6 +281,8 @@ export function PreQualPage() {
     // Calculate loan amounts
     let maxLoan = useFixedDown ? Math.max(maxPrice - downDollarOverride, 0) : maxPrice * (1 - dpForCalc / 100);
     let overLimit = false;
+    // The MI rate that applies to this result's own loan (FHA varies by size).
+    const miRateFor = (loan) => (prog.miRateAt ? prog.miRateAt(loan) : prog.miRate);
     if (maxLoan > prog.loanLimit) {
       maxLoan = prog.loanLimit;
       maxPrice = useFixedDown ? maxLoan + downDollarOverride : Math.floor(prog.loanLimit / (1 - dpForCalc / 100));
@@ -272,7 +297,7 @@ export function PreQualPage() {
       const pi = totalLoan > 0
         ? totalLoan * (mr * Math.pow(1 + mr, n)) / (Math.pow(1 + mr, n) - 1)
         : 0;
-      const mi = (maxLoan * (prog.miRate / 100)) / 12;
+      const mi = (maxLoan * (miRateFor(maxLoan) / 100)) / 12;
       const tax = (maxPrice * (taxRate / 100)) / 12;
       const ins = (maxPrice * (insRate / 100)) / 12;
       maxPayment = Math.round(pi + mi + tax + ins);
@@ -290,8 +315,9 @@ export function PreQualPage() {
     const aprUpfront = maxLoan * (prog.upfrontFee / 100);
     const aprCharges = aprLenderFees + aprUpfront;
     let aprMI = 0, aprMiMonths = 0;
+    const miRate = miRateFor(maxLoan);
     if (prog.name === "FHA") {
-      aprMI = (maxLoan * (prog.miRate / 100)) / 12;
+      aprMI = (maxLoan * (miRate / 100)) / 12;
       aprMiMonths = dpForCalc < 10 ? term * 12 : 132;
     } else if (prog.name === "Conventional" && dpForCalc < 20) {
       aprMI = (maxLoan * (prog.miRate / 100)) / 12;
@@ -302,7 +328,8 @@ export function PreQualPage() {
     }
     const apr = maxTotalLoan > 0 ? calculateAPR(maxTotalLoan, aprCharges, prog.rate, term, aprMI, aprMiMonths) : 0;
 
-    return { ...prog, eligible: isEligible, maxPrice, maxPayment, comfPrice, comfPayment, maxLoan, maxTotalLoan, comfLoan, currentBackDTI, bindingConstraint, frontMaxHousing, backTotalMax, backMaxHousing, overLimit, actualDownAmt, actualDownPctDisplay, cappedByMinDown, apr };
+    const miLabel = prog.miRateAt ? `MIP (${miRate}%)` : prog.miLabel;
+    return { ...prog, miRate, miLabel, eligible: isEligible, maxPrice, maxPayment, comfPrice, comfPayment, maxLoan, maxTotalLoan, comfLoan, currentBackDTI, bindingConstraint, frontMaxHousing, backTotalMax, backMaxHousing, overLimit, actualDownAmt, actualDownPctDisplay, cappedByMinDown, apr };
   });
 
   // ===================================================================
